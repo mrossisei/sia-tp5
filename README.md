@@ -120,6 +120,13 @@ Estudio de optimización (arquitecturas / optimizadores / learning rate / activa
 python3 ej1/experiments/optimization_study.py
 ```
 
+Experimentos extendidos (robustez del estudio):
+
+```bash
+python3 ej1/experiments/opt_lr_heatmap.py   # grilla optimizador × lr -> exp_opt_lr_heatmap.png
+python3 ej1/experiments/multiseed_study.py  # 5 seeds, media ± std    -> exp_multiseed.png
+```
+
 ### EJ1.b — Denoising Autoencoder
 
 ```bash
@@ -130,6 +137,13 @@ Entrena el DAE con augmentation online (ruido sal-y-pimienta regenerado cada
 época), lo evalúa frente a distintos tipos/niveles de ruido, compara con el AE
 básico, guarda el modelo en `ej1/results/denoising/model.npz` y genera las figuras.
 Requiere haber corrido antes `main_autoencoder.py` (usa su modelo como baseline).
+
+Barrido del nivel de ruido de *entrenamiento* (un DAE por nivel, matriz
+train × eval):
+
+```bash
+python3 ej1/experiments/dae_train_levels.py  # -> exp_train_levels_{heatmap,curves}.png
+```
 
 ### EJ2 — dataset de emojis (opcional, ya está generado)
 
@@ -158,6 +172,7 @@ Experimentos del VAE:
 python3 ej2/experiments/latent_dim.py   # -> ej2/results/exp_latent_dim.png
 python3 ej2/experiments/beta.py         # -> ej2/results/exp_beta.png
 python3 ej2/experiments/kl_warmup.py    # -> ej2/results/exp_kl_warmup.png
+python3 ej2/experiments/seeds.py        # -> ej2/results/exp_seeds.png (3 seeds, media ± std)
 ```
 
 ---

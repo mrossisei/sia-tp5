@@ -149,6 +149,30 @@
    \textbf{BCE} llega a max$=0$ @600; \textbf{MSE} se queda en max$=3$ (30/32) en 6000 ep.}
 \end{frame}
 
+\begin{frame}{Interaccion optimizador $\times$ learning rate}
+  \centering
+  \includegraphics[width=0.96\linewidth]{exp_opt_lr_heatmap.png}
+  \vfill
+  {\footnotesize El lr optimo \emph{depende} del optimizador: \textbf{Adam}
+   (paso adaptativo por parametro) converge a max$=0$ en \emph{los cinco} lr
+   probados (de @5400 con $10^{-4}$ a @150 con $10^{-2}$); \textbf{Momentum}
+   solo con lr$\ge 10^{-3}$; \textbf{GD} solo con lr$=10^{-2}$ (@4300).
+   Barrer lr y optimizador por separado puede enganar: la grilla completa
+   muestra que la robustez al lr es la ventaja real de Adam.}
+\end{frame}
+
+\begin{frame}{Variabilidad entre seeds (las conclusiones no son suerte)}
+  \centering
+  \includegraphics[width=0.88\linewidth]{exp_multiseed.png}
+  \vfill
+  {\footnotesize 5 seeds $[0,1,2,3,42]$ por config (media $\pm$ std).
+   \textbf{adam@1e-3} y \textbf{momentum@1e-2}: max$=0$ en 5/5 seeds
+   (conv $750\pm184$ y $470\pm37$); \textbf{gd@1e-2} converge solo en 4/5
+   ($\sim$4300) y una seed queda en max$=2$. \textbf{adam@5e-3} es lo mas
+   rapido y estable ($220\pm24$); \textbf{adam@1e-4} no alcanza en 6000 ep
+   (2/5). Las conclusiones del estudio con seed unica se sostienen.}
+\end{frame}
+
 \begin{frame}{Resultado: criterio $\le 1$ pixel CUMPLIDO}
   \begin{columns}
     \begin{column}{0.5\textwidth}
@@ -268,6 +292,27 @@
        ($\sigma{=}0.4$: 0.15) y masking (frac$=0.4$: 2.12).}
     \end{column}
   \end{columns}
+\end{frame}
+
+\begin{frame}{Nivel de ruido de \emph{train}: trade-off}
+  \begin{columns}
+    \begin{column}{0.54\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{exp_train_levels_heatmap.png}\\
+      {\scriptsize Un DAE entrenado por nivel $p$ (12000 ep c/u) $\times$ nivel de evaluacion.}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{exp_train_levels_curves.png}\\
+      {\scriptsize Curva por DAE; baseline AE basico punteado.}
+    \end{column}
+  \end{columns}
+  \vfill
+  {\footnotesize Mas ruido en train $\Rightarrow$ mas robustez en niveles altos
+   (eval $0.30$: $6.12$ con train $p{=}0.30$ vs $8.09$ con $p{=}0.05$) pero se
+   degrada la entrada \emph{limpia} (err $0.56$ con $p{=}0.30$). Sweet spot:
+   $p\in[0.10, 0.20]$ (limpio perfecto, robustez casi maxima). Cualquier DAE
+   $\ll$ AE basico en todo nivel.}
 \end{frame}
 
 % ===========================================================================
@@ -409,6 +454,18 @@
    \textbf{$\beta$}: $0.1$ (rec 111.3 / KL 10.0) vs $4.0$ (rec 120.6 / KL 3.25):
    trade-off rec/KL clasico.
    \textbf{warmup} (100 ep): reconstruccion final algo mejor (113.6 vs 114.1).}
+\end{frame}
+
+\begin{frame}{VAE: variabilidad entre seeds}
+  \centering
+  \includegraphics[width=0.98\linewidth]{exp_seeds.png}
+  \vfill
+  {\footnotesize El entrenamiento es doblemente estocastico (init de pesos +
+   sampleo de $\epsilon$ en la reparametrizacion); 3 seeds $[42, 7, 123]$
+   $\times$ 600 epocas dan curvas casi indistinguibles: loss total final
+   $118.02 \pm 0.14$ ($<0.3\%$ de dispersion), rec $112.2 \pm 0.2$,
+   KL $5.81 \pm 0.03$, rec\_MSE $4.45$--$4.69$. Ademas, seed$=42$ reproduce
+   \emph{exactamente} la corrida principal (determinismo del pipeline).}
 \end{frame}
 
 % ===========================================================================

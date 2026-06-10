@@ -697,9 +697,17 @@ Por Campus (igual que TP3/TP4):
 >   corromper el backward lo hace fallar). Genera caras/estrellas/lunas reconocibles;
 >   manifold 2D suave; interpolación. Experimentos `latent_dim`/`beta`/`kl_warmup`.
 > - **Entregables:** `README.md`, `context/{Autoencoders,VAE}.md`, presentación Beamer
->   `presentacion/main.tex` (compila a PDF de 26 páginas con pdflatex), 24 figuras.
+>   `presentacion/main.tex` (compila a PDF de 30 páginas con pdflatex), 30 figuras.
 > - **Base `shared/`** portada de TP3 + extensiones DL (Glorot, BCE estable, fix del
 >   backward MSE/BCE, `pixel_errors`); `tests/smoke_shared.py` con gradient-check.
+> - **Batería extendida** (2026-06, densidad estilo TP3/TP4): DAE entrenado a 4
+>   niveles de ruido (heatmap train×eval: sweet spot p∈[0.10,0.20], trade-off
+>   limpio-vs-robustez con p=0.30 → err limpio 0.56); grilla optimizador×lr
+>   (Adam converge max=0 en los 5 lr, Momentum sólo lr≥1e-3, GD sólo 1e-2);
+>   multi-seed 5×6 configs con media±std (adam@1e-3 conv 750±184 en 5/5 seeds,
+>   gd 4/5; adam@1e-4 2/5); VAE 3 seeds → loss final 118.02±0.14 (<0.3%),
+>   seed=42 reproduce exactamente la corrida principal. Todo el código clave
+>   comentado con referencias (PDF, slide) a las clases teóricas.
 
 Orden propuesto (cada paso es chico y verificable):
 
