@@ -1,0 +1,31 @@
+# Configuración EJ2 — VAE sobre emojis (16x16 gris, input_dim=256)
+vae:
+  input_dim: 256                  # 16x16
+  encoder_hidden: [256, 64]
+  latent_dim: 2                   # corrida principal 2D (manifold)
+  decoder_hidden: [64, 256]
+  hidden_activation: "relu"
+  output_activation: "logistic"
+  recon_loss: "bce"               # natural para píxeles; gradiente limpio (x_hat - x)
+  beta: 1.0                       # peso del KL (β-VAE)
+  kl_warmup_epochs: 0             # annealing opcional del KL
+  optimizer: "adam"
+  learning_rate: 0.001
+  epochs: 600
+  batch_size: 64
+  seed: 42
+
+data:
+  path: "ej2/data/emojis.npz"
+
+# Experimentos (barridos ejecutables en experiments/)
+experiments:
+  latent_dim:
+    dims: [2, 8, 16]
+    epochs: 400
+  beta:
+    betas: [0.1, 1.0, 4.0]
+    epochs: 400
+  kl_warmup:
+    warmup_epochs: [0, 100]
+    epochs: 400
