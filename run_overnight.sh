@@ -43,7 +43,7 @@ echo "[etapa 1/3] terminada: $(date)"
 
 echo; echo "[etapa 2/3] VAE largo 16x16 (50000 épocas)"; echo
 python3 ej2/experiments/vae_long.py --epochs 50000 --ckpt-every 1000 \
-    --snapshot-every 5000
+    --snapshot-every 1000
 echo "[etapa 2/3] terminada: $(date)"
 
 echo; echo "[etapa 3/3] dataset 24x24 + VAE grande (12000 épocas)"; echo
@@ -53,7 +53,7 @@ if [ ! -f ej2/data/emojis_24.npz ]; then
 fi
 python3 ej2/experiments/vae_long.py --data ej2/data/emojis_24.npz --tag 24px \
     --encoder 512 128 --decoder 128 512 --epochs 30000 --ckpt-every 250 \
-    --snapshot-every 2500
+    --snapshot-every 1000
 
 echo
 echo "============================================================"

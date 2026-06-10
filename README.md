@@ -198,13 +198,13 @@ historial): se puede cortar en cualquier momento y el último checkpoint queda
 usable, o reanudar agregando `--resume` al mismo comando de `vae_long.py`.
 
 **Todos los datos crudos quedan guardados** para crear gráficos nuevos sin
-re-correr nada (~150 MB en total):
+re-correr nada (~400 MB en total):
 
 | Archivo | Contenido |
 |---|---|
 | `exp_grid_full_runs.npz` | curvas de loss completas de las 75 corridas (float32), pixel-error por patrón, opt/lr/seed/conv de cada una |
 | `long_*/loss_history.csv` + `ckpt_state.npz` | loss total/rec/KL de **cada época** |
-| `long_*/snapshots/model_epNNNNNN.npz` | modelos intermedios (cada 5.000/2.500 ép.) → evolución de samples/manifold por época |
+| `long_*/snapshots/model_epNNNNNN.npz` | modelos intermedios (cada 1.000 ép. + tempranos en 50/100/250/500) → evolución de samples/manifold por época |
 | `long_*/vae_model.npz` | modelo final → cualquier figura nueva (latente, manifold, interpolaciones, etc.) |
 
 ---

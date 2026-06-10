@@ -37,6 +37,11 @@ import numpy as np
 from shared.optimizers import Adam
 from ej2.models.vae import VAE
 
+# Épocas tempranas donde SIEMPRE se guarda snapshot (además de la cadencia
+# regular): al principio el modelo cambia rápido y es la parte más
+# interesante de la figura de evolución.
+EARLY_SNAPSHOTS = (50, 100, 250, 500, 1000)
+
 
 # ----------------------------------------------------------------- utilidades
 def load_dataset(path):
@@ -224,7 +229,7 @@ def main():
 
             # Snapshot inmutable del modelo (para graficar la evolución del
             # entrenamiento después, sin re-entrenar).
-            if done % snap_every == 0:
+            if done % snap_every == 0 or done in EARLY_SNAPSHOTS:
                 snap_dir = os.path.join(out_dir, "snapshots")
                 os.makedirs(snap_dir, exist_ok=True)
                 vae.save(os.path.join(snap_dir, f"model_ep{done:06d}.npz"))
