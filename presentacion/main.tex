@@ -1,0 +1,445 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+
+% ---------------------------------------------------------------------------
+% TP5 - Deep Learning: Autoencoders y Variational Autoencoders
+% Beamer, tema Metropolis (consistente con TP3/TP4), en espanol.
+% Las figuras se leen desde ej1/results y ej2/results via \graphicspath.
+% Compilar: pdflatex main.tex  (x2)   [ver presentacion/README.md]
+% ---------------------------------------------------------------------------
+
+\usetheme{metropolis}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{xcolor}
+
+% Rutas a las figuras realmente generadas por el codigo.
+\graphicspath{{../ej1/results/basic/}{../ej1/results/denoising/}{../ej2/results/}}
+
+\title{TP5 --- Deep Learning}
+\subtitle{Autoencoders, Denoising Autoencoders y Variational Autoencoders (numpy puro)}
+\author{Sistemas de Inteligencia Artificial --- ITBA}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Contenido}
+  \tableofcontents
+\end{frame}
+
+% ===========================================================================
+\section{Problema y dataset}
+% ===========================================================================
+
+\begin{frame}{El problema}
+  \begin{itemize}
+    \item Implementar \textbf{Autoencoders} en \textbf{numpy puro}, sin frameworks de DL.
+    \item Reusamos la maquinaria de MLP con backpropagation de TP3
+          (forward/backward, optimizadores, activaciones, inicializadores).
+    \item Lo nuevo del Deep Learning: BCE numericamente estable, inicializacion
+          segun la activacion (Glorot/He) y la derivacion completa del VAE.
+  \end{itemize}
+  \vfill
+  \begin{block}{Tres bloques}
+    \begin{enumerate}
+      \item \textbf{EJ1.a} --- Autoencoder basico (cuello 2D, error $\le 1$ pixel).
+      \item \textbf{EJ1.b} --- Denoising Autoencoder.
+      \item \textbf{EJ2} --- Variational Autoencoder sobre emojis.
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Dataset \texttt{font.h}}
+  \begin{columns}
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item 32 caracteres de una fuente de 7 columnas (`` \texttt{`} '' a \texttt{DEL}).
+        \item Cada caracter es una grilla \textbf{7$\times$5 = 35 pixeles} binarios $\{0,1\}$.
+        \item Se decodifica de hexadecimal a una matriz binaria
+              ($X \in \{0,1\}^{32 \times 35}$).
+        \item Es un dataset chico y discreto: ideal para forzar al autoencoder a
+              \emph{memorizar} a traves de un cuello de botella.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \centering
+      \texttt{Letra 'a':}\\[2pt]
+      \texttt{.....}\\
+      \texttt{....\#}\\
+      \texttt{.\#\#\#\#}\\
+      \texttt{\#...\#}\\
+      \texttt{\#..\#\#}\\
+      \texttt{.\#\#.\#}\\
+      \texttt{.....}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{EJ1.a --- Autoencoder basico}
+% ===========================================================================
+
+\begin{frame}{Arquitectura del AE basico}
+  \begin{columns}
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item Arquitectura simetrica con \textbf{cuello de botella 2D}:
+              \[ 35 \to 60 \to 40 \to 20 \to \mathbf{2} \to 20 \to 40 \to 60 \to 35 \]
+        \item Activaciones: \textbf{tanh} en las ocultas, latente \emph{lineal},
+              salida \textbf{logistica} (pixeles en $(0,1)$).
+        \item Perdida \textbf{BCE} (binaria), \textbf{Adam} (lr $=10^{-3}$),
+              full-batch, EarlyStopping.
+        \item \textbf{Sin regularizacion}: queremos sobreajustar (memorizar)
+              las 32 letras.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{learning_curve.png}\\
+      {\scriptsize Curva de loss (BCE) durante el entrenamiento.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Busqueda de arquitecturas y optimizadores}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{exp_architecture.png}\\
+      {\scriptsize Profundidad/ancho vs convergencia.}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{exp_optimizer.png}\\
+      {\scriptsize GD vs Momentum vs Adam.}
+    \end{column}
+  \end{columns}
+  \vfill
+  {\footnotesize Epoca de convergencia (primera con max$\le 1$): Adam @600 $\ll$
+   Momentum @500 $\ll$ GD @4300. Las tres arquitecturas llegan a max$=0$;
+   la profunda-ancha converge mas rapido (@600).}
+\end{frame}
+
+\begin{frame}{Learning rate, activacion y loss}
+  \begin{columns}
+    \begin{column}{0.33\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{exp_learning_rate.png}\\
+      {\scriptsize Learning rate (Adam).}
+    \end{column}
+    \begin{column}{0.33\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{exp_activation.png}\\
+      {\scriptsize Activacion oculta.}
+    \end{column}
+    \begin{column}{0.33\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{exp_loss.png}\\
+      {\scriptsize BCE vs MSE.}
+    \end{column}
+  \end{columns}
+  \vfill
+  {\footnotesize \textbf{tanh} y \textbf{relu} convergen a max$=0$;
+   la \textbf{logistica} oculta \emph{no} converge (max$=7$, 27/32).
+   \textbf{BCE} llega a max$=0$ @600; \textbf{MSE} se queda en max$=3$ (30/32) en 6000 ep.}
+\end{frame}
+
+\begin{frame}{Resultado: criterio $\le 1$ pixel CUMPLIDO}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \begin{table}
+        \centering\small
+        \begin{tabular}{lr}
+          \toprule
+          Metrica & Valor \\
+          \midrule
+          max pixel-error      & \textbf{0} \\
+          mean pixel-error     & 0.0000 \\
+          letras exactas       & \textbf{32/32} \\
+          letras con $\le 1$   & \textbf{32/32} \\
+          BCE final (mejor ep) & $1.74\times10^{-6}$ \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+      {\footnotesize Las 5 seeds $[0,1,2,3,42]$ llegan a max$=0$ y 32/32 exactas.
+       El modelo recargado desde \texttt{model.npz} reproduce el resultado.}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{reconstruction_grid.png}\\
+      {\scriptsize Original vs reconstruccion (32 letras).}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Espacio latente 2D vs PCA lineal}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{latent_scatter.png}\\
+      {\scriptsize Latente 2D del AE no lineal.}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{latent_scatter_pca.png}\\
+      {\scriptsize Proyeccion PCA 2D (baseline lineal).}
+    \end{column}
+  \end{columns}
+  \vfill
+  {\footnotesize \textbf{PCA 2D} captura solo $27.1\%$ de la varianza
+   (PC1 $15.2\%$ + PC2 $11.9\%$), mientras que el AE \emph{no lineal} con el mismo
+   cuello 2D reconstruye perfecto. El histograma de pixel-error confirma 32/32 exactas.}
+\end{frame}
+
+\begin{frame}{Generacion de una letra nueva}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item Tomamos un punto \emph{nuevo} del espacio latente 2D y lo pasamos
+              por el decoder.
+        \item El AE genera una "letra" que mezcla rasgos de los vecinos latentes.
+        \item Limitacion: con un cuello tan chico (2D) y sin un prior, gran parte
+              del latente son \emph{agujeros} que decodifican a basura.
+      \end{itemize}
+      \vfill
+      {\footnotesize Esta limitacion motiva el VAE (EJ2): un latente \emph{continuo
+       y muestreable} con un prior gaussiano.}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{new_letter_generation.png}\\
+      {\scriptsize Decodificacion de puntos latentes nuevos.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{EJ1.b --- Denoising Autoencoder}
+% ===========================================================================
+
+\begin{frame}{Denoising: idea y ruido}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item Entrenamos un DAE con \textbf{augmentation online}: cada epoca se
+              regenera el ruido y el target es la letra \emph{limpia}.
+        \item Ruido de entrenamiento: \textbf{sal-y-pimienta} $p=0.10$.
+        \item Misma arquitectura simetrica; cuello un poco mas ancho (8D, el
+              denoising no exige 2D).
+        \item Se evalua frente a sal-y-pimienta, gaussiano y masking.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{noise_examples.png}\\
+      {\scriptsize Ejemplos: ruidoso $\to$ limpio (DAE).}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Barrido de niveles de ruido}
+  \begin{columns}
+    \begin{column}{0.55\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{noise_sweep.png}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \begin{table}\centering\scriptsize
+        \begin{tabular}{lrr}
+          \toprule
+          $p$ (s\&p) & DAE & AE basico \\
+          \midrule
+          0.05 & 0.027 & 6.86 \\
+          0.10 & 0.267 & 9.88 \\
+          0.20 & 2.65  & 12.32 \\
+          0.30 & 6.77  & 14.82 \\
+          0.40 & 11.27 & 16.94 \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+      {\scriptsize pixel-error \emph{medio} (32 letras). El DAE reduce el error
+       $\sim$25--250$\times$ en niveles bajos/medios.}\\[3pt]
+      {\scriptsize Generaliza a ruido no visto: gaussiano
+       ($\sigma{=}0.4$: 0.15) y masking (frac$=0.4$: 2.12).}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ===========================================================================
+\section{EJ2 --- Variational Autoencoder}
+% ===========================================================================
+
+\begin{frame}{Motivacion: los "agujeros" del latente}
+  \begin{itemize}
+    \item Un AE comun aprende un latente \emph{arbitrario}: puntos aislados con
+          grandes regiones vacias que decodifican a ruido.
+    \item No hay forma principiada de \textbf{muestrear} letras/imagenes nuevas.
+  \end{itemize}
+  \vfill
+  \begin{block}{El VAE: un latente continuo y muestreable}
+    \begin{itemize}
+      \item El encoder produce una \textbf{distribucion} $q(z|x)=\mathcal{N}(\mu, \sigma^2)$
+            en lugar de un punto.
+      \item Un termino \textbf{KL} la empuja hacia el prior $\mathcal{N}(0, I)$,
+            llenando los agujeros.
+      \item Asi podemos generar muestreando $z \sim \mathcal{N}(0,I)$ y decodificando.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Teoria: ELBO, KL y reparametrizacion}
+  Maximizamos el \textbf{ELBO} (equivalente a minimizar):
+  \[
+    \mathcal{L} = \underbrace{\mathbb{E}_{q(z|x)}\big[-\log p(x|z)\big]}_{\text{reconstruccion (BCE)}}
+                 + \beta \cdot \underbrace{D_{\mathrm{KL}}\!\big(q(z|x)\,\|\,p(z)\big)}_{\text{regularizacion}}
+  \]
+  \vspace{-2pt}
+  \begin{itemize}
+    \item \textbf{KL cerrado} (prior gaussiano):
+          $D_{\mathrm{KL}} = -\tfrac{1}{2}\sum_j \big(1 + \log\sigma_j^2 - \mu_j^2 - \sigma_j^2\big)$.
+    \item \textbf{Reparametrizacion} (gradiente a traves del muestreo):
+          $z = \mu + \sigma \odot \epsilon$, con $\epsilon \sim \mathcal{N}(0, I)$.
+    \item $\beta$ pondera el KL ($\beta$-VAE): controla el trade-off
+          reconstruccion vs estructura del latente.
+  \end{itemize}
+  \vfill
+  \begin{alertblock}{Gradient-check}
+    Backprop analitico vs diferencias finitas: error relativo maximo
+    $\mathbf{1.25\times10^{-10}}$ (tol $10^{-4}$) \textbf{--- PASA}.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Dataset de emojis}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item 16 clases de emojis (caras, corazon, estrella, sol, etc.).
+        \item Rasterizados desde \textbf{NotoColorEmoji} a \textbf{16$\times$16}
+              en escala de grises (input\_dim $=256$).
+        \item Augmentation (escala, rotacion, traslacion) $\to$
+              \textbf{960 muestras} (60 por clase), determinista (seed=42).
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{dataset_sample.png}\\
+      {\scriptsize Una muestra por clase.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{VAE: entrenamiento y reconstruccion}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{loss_curves.png}\\
+      {\scriptsize Loss total = reconstruccion + KL.}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{reconstructions.png}\\
+      {\scriptsize Original vs reconstruccion ($z=\mu$).}
+    \end{column}
+  \end{columns}
+  \vfill
+  {\footnotesize Principal (latent\_dim=2, BCE, $\beta{=}1$, 600 ep): loss total
+   $=117.99$ (rec $112.22$ + KL $5.78$); MSE de reconstruccion $=4.58$;
+   salidas en $[0, 0.97]$, sin NaN.}
+\end{frame}
+
+\begin{frame}{VAE: espacio latente y grilla generativa}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{../ej2/results/latent_scatter.png}\\
+      {\scriptsize Latente 2D coloreado por clase.}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{manifold_grid.png}\\
+      {\scriptsize Manifold: decodificacion de una grilla de $z$.}
+    \end{column}
+  \end{columns}
+  \vfill
+  {\footnotesize El prior gaussiano \emph{compacta} el latente: la grilla genera
+   transiciones suaves entre emojis (sin agujeros como en el AE comun).}
+\end{frame}
+
+\begin{frame}{VAE: muestreo e interpolacion}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{samples.png}\\
+      {\scriptsize Muestras $z \sim \mathcal{N}(0, I)$.}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{interpolation.png}\\
+      {\scriptsize Interpolacion lineal en el latente.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{VAE: experimentos (latent\_dim, $\beta$, KL warmup)}
+  \begin{columns}
+    \begin{column}{0.33\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{exp_latent_dim.png}\\
+      {\scriptsize latent\_dim.}
+    \end{column}
+    \begin{column}{0.33\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{exp_beta.png}\\
+      {\scriptsize $\beta$-VAE.}
+    \end{column}
+    \begin{column}{0.33\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{exp_kl_warmup.png}\\
+      {\scriptsize KL warmup.}
+    \end{column}
+  \end{columns}
+  \vfill
+  {\footnotesize \textbf{latent\_dim}: dim 2 (rec\_MSE 5.27) $\to$ dim 8/16
+   (rec\_MSE $\approx$1.6) reconstruyen mucho mejor.
+   \textbf{$\beta$}: $0.1$ (rec 111.3 / KL 10.0) vs $4.0$ (rec 120.6 / KL 3.25):
+   trade-off rec/KL clasico.
+   \textbf{warmup} (100 ep): reconstruccion final algo mejor (113.6 vs 114.1).}
+\end{frame}
+
+% ===========================================================================
+\section{Conclusiones}
+% ===========================================================================
+
+\begin{frame}{Conclusiones}
+  \begin{itemize}
+    \item \textbf{EJ1.a}: el AE no lineal con cuello \textbf{2D} memoriza las 32
+          letras con \textbf{0 pixeles de error} (32/32 exactas), muy por encima
+          del baseline PCA 2D ($27\%$ de varianza).
+    \item \textbf{EJ1.b}: el DAE limpia ruido entre $\sim$25--250$\times$ mejor que
+          el AE basico y \textbf{generaliza a ruido no visto} (gaussiano, masking).
+    \item \textbf{EJ2}: el VAE pasa el gradient-check ($1.25\times10^{-10}$),
+          aprende un latente \emph{continuo} y permite \textbf{generar} emojis nuevos
+          por muestreo e interpolacion.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Limitaciones}
+  \begin{itemize}
+    \item \textbf{Cuello 2D}: la reconstruccion perfecta del AE basico es
+          \emph{memorizacion} de 32 patrones; con datos mas ricos un cuello 2D no
+          alcanza (lo vemos en el VAE: dim 2 reconstruye peor que dim 8/16).
+    \item El \textbf{AE comun} no tiene un latente muestreable (agujeros);
+          el VAE lo resuelve, pero a costa de algo de nitidez (trade-off $\beta$).
+    \item Dataset chico y de baja resolucion (font.h 7$\times$5, emojis 16$\times$16):
+          buen banco de pruebas pedagogico, no representativo de imagenes naturales.
+  \end{itemize}
+  \vfill
+  \begin{center}\Large Gracias.\end{center}
+\end{frame}
+
+\end{document}
