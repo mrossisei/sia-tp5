@@ -2,10 +2,16 @@
 # =============================================================================
 # TP5 — Experimentos pesados (dejar corriendo de noche).
 #
-# Lanzar con:
+# Lanzar en primer plano (deja log y muestra progreso):
+#     ./run_overnight.sh 2>&1 | tee overnight.log
+# o en background:
 #     nohup ./run_overnight.sh > overnight.log 2>&1 &
-# Seguir el progreso con:
-#     tail -f overnight.log
+#
+# TODOS los datos crudos quedan guardados para re-graficar sin re-correr:
+#   - exp_grid_full_runs.npz: curvas de loss de las 75 corridas + métricas
+#   - long_*/ckpt_state.npz + loss_history.csv: loss por época completa
+#   - long_*/snapshots/model_epNNNNNN.npz: modelos intermedios (evolución)
+#   - long_*/vae_model.npz: modelo final (re-generable cualquier figura)
 #
 # Etapas (secuenciales; cada una deja resultados aunque se corte la siguiente):
 #   1. EJ1: grilla completa optimizador x lr (3x5) x 5 seeds x 30000 épocas
@@ -36,7 +42,8 @@ python3 ej1/experiments/grid_full.py
 echo "[etapa 1/3] terminada: $(date)"
 
 echo; echo "[etapa 2/3] VAE largo 16x16 (50000 épocas)"; echo
-python3 ej2/experiments/vae_long.py --epochs 50000 --ckpt-every 1000
+python3 ej2/experiments/vae_long.py --epochs 50000 --ckpt-every 1000 \
+    --snapshot-every 5000
 echo "[etapa 2/3] terminada: $(date)"
 
 echo; echo "[etapa 3/3] dataset 24x24 + VAE grande (12000 épocas)"; echo
@@ -45,7 +52,8 @@ if [ ! -f ej2/data/emojis_24.npz ]; then
         --out ej2/data/emojis_24.npz
 fi
 python3 ej2/experiments/vae_long.py --data ej2/data/emojis_24.npz --tag 24px \
-    --encoder 512 128 --decoder 128 512 --epochs 30000 --ckpt-every 250
+    --encoder 512 128 --decoder 128 512 --epochs 30000 --ckpt-every 250 \
+    --snapshot-every 2500
 
 echo
 echo "============================================================"

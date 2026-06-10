@@ -16,6 +16,10 @@ Uso típico (ver run_overnight.sh):
 Salidas en ej2/results/long_{tag}/:
   ckpt_model.npz / ckpt_state.npz  (checkpoint rodante, escritura atómica)
   loss_history.csv, loss_curve.png (actualizados en cada checkpoint)
+  snapshots/model_epNNNNNN.npz     (modelos intermedios cada --snapshot-every:
+                                    permiten graficar la EVOLUCIÓN de samples/
+                                    manifold/reconstrucción por época sin
+                                    re-entrenar)
   vae_model.npz + suite de figuras (al terminar)
 """
 
@@ -137,10 +141,14 @@ def main():
                    help="épocas de warmup lineal del beta (0 = sin warmup)")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--ckpt-every", type=int, default=1000)
+    p.add_argument("--snapshot-every", type=int, default=0,
+                   help="cada cuántas épocas guardar un modelo intermedio en "
+                        "snapshots/ (0 = automático: 5 x ckpt-every)")
     p.add_argument("--log-every", type=int, default=200)
     p.add_argument("--resume", action="store_true",
                    help="continúa desde el último checkpoint del mismo tag")
     args = p.parse_args()
+    snap_every = args.snapshot_every if args.snapshot_every > 0 else 5 * args.ckpt_every
 
     out_dir = os.path.join(REPO_ROOT, "ej2", "results", f"long_{args.tag}")
     os.makedirs(out_dir, exist_ok=True)
@@ -213,6 +221,13 @@ def main():
                 save_checkpoint(out_dir, vae, opt, hist, done)
                 dump_history(out_dir, hist)
                 plot_quick_curve(out_dir, hist)
+
+            # Snapshot inmutable del modelo (para graficar la evolución del
+            # entrenamiento después, sin re-entrenar).
+            if done % snap_every == 0:
+                snap_dir = os.path.join(out_dir, "snapshots")
+                os.makedirs(snap_dir, exist_ok=True)
+                vae.save(os.path.join(snap_dir, f"model_ep{done:06d}.npz"))
     except KeyboardInterrupt:
         print(f"\n[corte] interrumpido en la época {done}; guardo checkpoint...",
               flush=True)

@@ -9,6 +9,10 @@ Genera (en ej1/results/basic/):
   - exp_grid_full_heatmap.png : max-pixel medio y época de convergencia media
                                 (anotado con n_seeds que convergen y ±std)
   - exp_grid_full.csv         : todas las corridas (config × seed)
+  - exp_grid_full_runs.npz    : DATOS CRUDOS de las 75 corridas (curva de loss
+                                completa float32, pixel-error por patrón,
+                                opt/lr/seed/max/conv) para poder armar gráficos
+                                nuevos sin re-correr (~10 MB comprimido)
 
 Pensado para run_overnight.sh (~30-60 min con la implementación vectorizada).
 """
@@ -76,6 +80,9 @@ def main(epochs=DEFAULT_EPOCHS, seeds=None, opts=None, lrs=None, suffix=""):
     cell_max = [[[] for _ in lrs] for _ in opts]
     cell_conv = [[[] for _ in lrs] for _ in opts]
     rows = []
+    # datos crudos por corrida (para re-graficar sin re-correr)
+    raw = {"opt": [], "lr": [], "seed": [], "max_pixel": [], "n_exact": [],
+           "conv_epoch": [], "losses": [], "per_pattern": []}
     t0 = time.time()
     k = 0
     for i, opt_name in enumerate(opts):
@@ -83,12 +90,20 @@ def main(epochs=DEFAULT_EPOCHS, seeds=None, opts=None, lrs=None, suffix=""):
             for seed in seeds:
                 k += 1
                 t = time.time()
-                _, _, s, ce = train(X, ARCH, "tanh", "identity", "bce",
-                                    opt_name, lr, epochs=epochs, seed=seed)
+                _, losses, s, ce = train(X, ARCH, "tanh", "identity", "bce",
+                                         opt_name, lr, epochs=epochs, seed=seed)
                 cell_max[i][j].append(float(s["max"]))
                 cell_conv[i][j].append(float(ce) if ce is not None else np.nan)
                 rows.append([opt_name, lr, seed, s["max"], s["n_exact"],
                              "" if ce is None else int(ce)])
+                raw["opt"].append(opt_name)
+                raw["lr"].append(float(lr))
+                raw["seed"].append(int(seed))
+                raw["max_pixel"].append(int(s["max"]))
+                raw["n_exact"].append(int(s["n_exact"]))
+                raw["conv_epoch"].append(-1 if ce is None else int(ce))
+                raw["losses"].append(np.asarray(losses, dtype=np.float32))
+                raw["per_pattern"].append(np.asarray(s["per_pattern"], dtype=np.int16))
                 el = time.time() - t0
                 eta = el / k * (n_runs - k) / 60.0
                 print(f"  [{k:3d}/{n_runs}] {opt_name} lr={lr:g} seed={seed}: "
@@ -131,6 +146,21 @@ def main(epochs=DEFAULT_EPOCHS, seeds=None, opts=None, lrs=None, suffix=""):
         w = csv.writer(f)
         w.writerow(["optimizador", "lr", "seed", "max_pixel", "n_exact", "conv_epoch"])
         w.writerows(rows)
+
+    # Datos crudos: TODO lo necesario para regenerar/crear gráficos sin
+    # re-correr las 75 corridas (curvas de loss completas incluidas).
+    np.savez_compressed(
+        os.path.join(OUT, f"exp_grid_full_runs{suffix}.npz"),
+        opt=np.array(raw["opt"]),
+        lr=np.array(raw["lr"]),
+        seed=np.array(raw["seed"]),
+        max_pixel=np.array(raw["max_pixel"]),
+        n_exact=np.array(raw["n_exact"]),
+        conv_epoch=np.array(raw["conv_epoch"]),   # -1 = no convergió
+        losses=np.stack(raw["losses"]),           # (n_runs, epochs) float32
+        per_pattern=np.stack(raw["per_pattern"]), # (n_runs, 32) int16
+        epochs=np.array(epochs),
+    )
 
     print(f"[ok] grid_full completo en {(time.time()-t0)/60.0:.1f} min -> {OUT}",
           flush=True)

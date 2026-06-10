@@ -178,8 +178,8 @@ python3 ej2/experiments/seeds.py        # -> ej2/results/exp_seeds.png (3 seeds,
 ### Experimentos pesados (dejar corriendo de noche)
 
 ```bash
-nohup ./run_overnight.sh > overnight.log 2>&1 &
-tail -f overnight.log   # para mirar el progreso
+./run_overnight.sh 2>&1 | tee overnight.log          # primer plano + log
+# o:  nohup ./run_overnight.sh > overnight.log 2>&1 &   # background
 ```
 
 Corre en secuencia (~6–7 h en total):
@@ -196,6 +196,16 @@ Corre en secuencia (~6–7 h en total):
 Los VAE largos guardan **checkpoints atómicos** (modelo + estado de Adam +
 historial): se puede cortar en cualquier momento y el último checkpoint queda
 usable, o reanudar agregando `--resume` al mismo comando de `vae_long.py`.
+
+**Todos los datos crudos quedan guardados** para crear gráficos nuevos sin
+re-correr nada (~150 MB en total):
+
+| Archivo | Contenido |
+|---|---|
+| `exp_grid_full_runs.npz` | curvas de loss completas de las 75 corridas (float32), pixel-error por patrón, opt/lr/seed/conv de cada una |
+| `long_*/loss_history.csv` + `ckpt_state.npz` | loss total/rec/KL de **cada época** |
+| `long_*/snapshots/model_epNNNNNN.npz` | modelos intermedios (cada 5.000/2.500 ép.) → evolución de samples/manifold por época |
+| `long_*/vae_model.npz` | modelo final → cualquier figura nueva (latente, manifold, interpolaciones, etc.) |
 
 ---
 
