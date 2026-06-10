@@ -19,6 +19,7 @@ Método:
       escala ±5%, rotación ±10° (determinista, seed fijo)
 """
 
+import argparse
 import os
 import sys
 
@@ -32,13 +33,15 @@ import numpy as np
 from PIL import Image, ImageFont, ImageDraw
 
 # ---------------------------------------------------------------------------
-# Configuración
+# Configuración (los defaults reproducen exactamente el emojis.npz original;
+# --size/--per-class/--out permiten generar variantes, p.ej. 24x24 para la
+# corrida larga del VAE: ver run_overnight.sh)
 # ---------------------------------------------------------------------------
 FONT_PATH = "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"
 FONT_SIZE = 109          # único tamaño reconocido por NotoColorEmoji
 IMG_CANVAS = 128         # canvas para rasterizar antes de recortar
-TARGET_SIZE = 16         # salida final 16x16
-AUGMENT_PER_CLASS = 60   # variantes por clase (incluyendo el original)
+TARGET_SIZE = 16         # salida final (sobrescribible con --size)
+AUGMENT_PER_CLASS = 60   # variantes por clase (sobrescribible con --per-class)
 SEED = 42
 MIN_NONZERO = 1000       # mínimo de píxeles con tinta para aceptar el emoji
 
@@ -135,9 +138,10 @@ def augmentar(base: np.ndarray, n: int, rng: np.random.Generator) -> list[np.nda
         angle = rng.uniform(-10, 10)
         img = img.rotate(angle, resample=Image.BILINEAR, fillcolor=0)
 
-        # Traslación aleatoria ±2px
-        tx = int(rng.integers(-2, 3))
-        ty = int(rng.integers(-2, 3))
+        # Traslación aleatoria (±2px en 16x16; escala con el tamaño)
+        max_t = max(2, TARGET_SIZE // 8)
+        tx = int(rng.integers(-max_t, max_t + 1))
+        ty = int(rng.integers(-max_t, max_t + 1))
         img = img.transform(
             (TARGET_SIZE, TARGET_SIZE),
             Image.AFFINE,
@@ -193,8 +197,30 @@ def guardar_hoja_contacto(X_por_clase: list[np.ndarray], labels: list[str], ruta
 # ---------------------------------------------------------------------------
 
 def main():
+    global TARGET_SIZE, AUGMENT_PER_CLASS, OUT_NPZ, OUT_PNG
+
+    parser = argparse.ArgumentParser(description="Genera el dataset de emojis.")
+    parser.add_argument("--size", type=int, default=TARGET_SIZE,
+                        help="lado de la imagen de salida (default 16)")
+    parser.add_argument("--per-class", type=int, default=AUGMENT_PER_CLASS,
+                        help="variantes por clase, incluye el original (default 60)")
+    parser.add_argument("--out", type=str, default=OUT_NPZ,
+                        help="ruta del .npz de salida")
+    parser.add_argument("--png", type=str, default=None,
+                        help="ruta de la hoja de contacto (default: derivada de --out)")
+    args = parser.parse_args()
+
+    TARGET_SIZE = int(args.size)
+    AUGMENT_PER_CLASS = int(args.per_class)
+    OUT_NPZ = args.out
+    if args.png is not None:
+        OUT_PNG = args.png
+    elif TARGET_SIZE != 16:
+        OUT_PNG = os.path.join(EJ2_DIR, "results", f"dataset_sample_{TARGET_SIZE}px.png")
+
     print("=" * 60)
-    print("Construyendo dataset de emojis (16x16, escala de grises)")
+    print(f"Construyendo dataset de emojis ({TARGET_SIZE}x{TARGET_SIZE}, "
+          f"escala de grises, {AUGMENT_PER_CLASS}/clase)")
     print("=" * 60)
 
     rng = np.random.default_rng(SEED)
@@ -243,7 +269,8 @@ def main():
     print(f"  Clases              : {list(labels)}")
 
     # Verificaciones
-    assert X.shape[1] == 256, f"Esperado 256, got {X.shape[1]}"
+    assert X.shape[1] == TARGET_SIZE * TARGET_SIZE, (
+        f"Esperado {TARGET_SIZE * TARGET_SIZE}, got {X.shape[1]}")
     assert X.min() >= 0.0 and X.max() <= 1.0, "Rango fuera de [0,1]"
     assert not np.isnan(X).any(), "Hay NaN en X"
     assert len(labels) == n_clases, "Mismatch labels"

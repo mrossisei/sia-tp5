@@ -175,6 +175,28 @@ python3 ej2/experiments/kl_warmup.py    # -> ej2/results/exp_kl_warmup.png
 python3 ej2/experiments/seeds.py        # -> ej2/results/exp_seeds.png (3 seeds, media ± std)
 ```
 
+### Experimentos pesados (dejar corriendo de noche)
+
+```bash
+nohup ./run_overnight.sh > overnight.log 2>&1 &
+tail -f overnight.log   # para mirar el progreso
+```
+
+Corre en secuencia (~6–7 h en total):
+
+1. **EJ1 grilla completa**: optimizador × lr (3×5) × 5 seeds × 30.000 épocas
+   (75 corridas) → `ej1/results/basic/exp_grid_full_heatmap.png` con media ± std
+   por celda. Des-censura las celdas "no converge" del heatmap rápido de 6.000 ép.
+2. **VAE largo 16×16**: 50.000 épocas (vs 600 del run principal), checkpoints
+   cada 1.000 → `ej2/results/long_16px/` (modelo + curvas + suite de figuras).
+3. **Dataset 24×24** (120 variantes/clase, 1.920 muestras) + **VAE grande**
+   `[576,512,128]→2→[128,512,576]` (~723k parámetros), 30.000 épocas,
+   checkpoints cada 250 → `ej2/results/long_24px/`.
+
+Los VAE largos guardan **checkpoints atómicos** (modelo + estado de Adam +
+historial): se puede cortar en cualquier momento y el último checkpoint queda
+usable, o reanudar agregando `--resume` al mismo comando de `vae_long.py`.
+
 ---
 
 ## 5. Resultados

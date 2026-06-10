@@ -708,6 +708,11 @@ Por Campus (igual que TP3/TP4):
 >   gd 4/5; adam@1e-4 2/5); VAE 3 seeds → loss final 118.02±0.14 (<0.3%),
 >   seed=42 reproduce exactamente la corrida principal. Todo el código clave
 >   comentado con referencias (PDF, slide) a las clases teóricas.
+> - **Overnight preparado** (`run_overnight.sh`, ~6-7 h): grilla completa EJ1
+>   30k ép × 5 seeds (des-censura los "no converge" de 6k), VAE largo 16px
+>   50k ép y VAE grande 24px (723k params, 30k ép) con checkpoints atómicos
+>   + resume (`vae_long.py`). Al correr, actualizar presentación con
+>   resultados (slides de grid_full y VAE largo) — pendiente de la corrida.
 
 Orden propuesto (cada paso es chico y verificable):
 
