@@ -1,0 +1,5 @@
+# TP5 - Deep Learning (Autoencoders / VAE). numpy puro, sin frameworks de DL.
+numpy>=1.24.0
+matplotlib>=3.7.0
+pyyaml>=6.0
+pillow>=9.0.0          # rasterizado de emojis (EJ2)
