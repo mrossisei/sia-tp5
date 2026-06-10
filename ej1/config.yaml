@@ -1,0 +1,40 @@
+# Config del EJ1 (Autoencoders sobre font.h). Una seccion por bloque.
+# El AE basico NO usa regularizacion (queremos MEMORIZAR los 32 patrones).
+
+basic:
+  # Encoder/decoder anchos para tener capacidad ALTA fuera del cuello 2D.
+  architecture: [35, 60, 40, 20, 2, 20, 40, 60, 35]
+  hidden_activation: "tanh"          # camino al cuello estable
+  output_activation: "logistic"      # pixeles en (0,1)
+  bottleneck_activation: "identity"  # latente lineal (sin saturar)
+  loss: "bce"                         # BCE -> reconstrucciones binarias mas nitidas
+  optimizer: "adam"
+  learning_rate: 0.001
+  epochs: 30000
+  batch_size: 0                       # full-batch (32 patrones)
+  initializer: "glorot"
+  seed: 0                             # mejor seed encontrada (ver experiments): max=0 px
+  weight_decay: 0.0                   # SIN regularizacion (overfitting deseado)
+  early_stopping: { enabled: true, patience: 4000, min_delta: 1.0e-7 }
+  seeds_to_try: [0, 1, 2, 3, 42]     # se prueban varias y se elige la mejor
+
+denoising:
+  # Misma arquitectura simetrica; cuello un poco mas ancho (denoising no exige 2D).
+  architecture: [35, 60, 40, 20, 8, 20, 40, 60, 35]
+  hidden_activation: "tanh"
+  output_activation: "logistic"
+  bottleneck_activation: "tanh"
+  bottleneck_size: 8
+  loss: "bce"
+  optimizer: "adam"
+  learning_rate: 0.001
+  epochs: 12000
+  batch_size: 0
+  initializer: "glorot"
+  seed: 42
+  weight_decay: 0.0
+  noise:
+    train_type: "salt_pepper"        # ruido usado en entrenamiento (augmentation online)
+    train_level: 0.10
+    sweep_types: ["salt_pepper", "gaussian", "masking"]
+    sweep_levels: [0.0, 0.05, 0.10, 0.20, 0.30, 0.40]
