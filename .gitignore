@@ -549,3 +549,6 @@ pyrightconfig.json
 .history
 .ionide
 overnight.log
+ej2/results/long_*/snapshots/
+ej2/results/long_*/ckpt_model.npz
+ej2/results/long_*/ckpt_state.npz

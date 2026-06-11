@@ -197,6 +197,19 @@ Los VAE largos guardan **checkpoints atómicos** (modelo + estado de Adam +
 historial): se puede cortar en cualquier momento y el último checkpoint queda
 usable, o reanudar agregando `--resume` al mismo comando de `vae_long.py`.
 
+Una vez corrido el overnight, las figuras de análisis (evolución por snapshots
+y comparación 600 vs 50.000 épocas) se generan con:
+
+```bash
+python3 ej2/analysis/long_run.py
+```
+
+Resultados de la corrida del 2026-06-11 (~10 h): grilla completa en 14 min
+(des-censura: momentum@5e-4 converge @8130±583 y gd@5e-3 @9320±1543, ambos 5/5;
+gd≤1e-3 y momentum@1e-4 siguen 0/5 → fracaso real); VAE 16px 50.000 ép. en
+1.4 h (**rec_MSE 4.58 → 1.30** con el mismo cuello 2D); VAE 24×24 (723k
+parámetros) 30.000 ép. en **8.4 h** (rec_MSE 3.05 sobre 576 píxeles).
+
 **Todos los datos crudos quedan guardados** para crear gráficos nuevos sin
 re-correr nada (~400 MB en total):
 

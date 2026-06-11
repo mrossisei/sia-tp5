@@ -708,11 +708,14 @@ Por Campus (igual que TP3/TP4):
 >   gd 4/5; adam@1e-4 2/5); VAE 3 seeds → loss final 118.02±0.14 (<0.3%),
 >   seed=42 reproduce exactamente la corrida principal. Todo el código clave
 >   comentado con referencias (PDF, slide) a las clases teóricas.
-> - **Overnight preparado** (`run_overnight.sh`, ~6-7 h): grilla completa EJ1
->   30k ép × 5 seeds (des-censura los "no converge" de 6k), VAE largo 16px
->   50k ép y VAE grande 24px (723k params, 30k ép) con checkpoints atómicos
->   + resume (`vae_long.py`). Al correr, actualizar presentación con
->   resultados (slides de grid_full y VAE largo) — pendiente de la corrida.
+> - **Overnight EJECUTADO** (2026-06-11, ~10 h, `run_overnight.sh`): grilla
+>   completa EJ1 30k ép × 5 seeds en 14 min (momentum@5e-4 → 8130±583 5/5 y
+>   gd@5e-3 → 9320±1543 5/5 eran censura por presupuesto; gd≤1e-3 y
+>   momentum@1e-4 son fracasos reales, 0/5); VAE 16px 50k ép en 1.4 h:
+>   rec_MSE 4.58 → **1.30** con el mismo cuello 2D (mejor que dim 8/16 a 400
+>   ép); VAE 24×24 (723k params) 30k ép en 8.4 h, rec_MSE 3.05. Análisis
+>   post-overnight en `ej2/analysis/long_run.py` (evolución por snapshots,
+>   600-vs-50k). Presentación final: **34 páginas** (4 slides overnight).
 
 Orden propuesto (cada paso es chico y verificable):
 
