@@ -1,0 +1,44 @@
+# Config EJ3 — VAE sobre MNIST 28x28 (variante alternativa del EJ2).
+#
+# El EJ3 reutiliza EXACTAMENTE el VAE de ej2/models/vae.py (numpy puro, ya
+# gradchequeado). Lo único distinto es el dataset (MNIST, input_dim=784) y que
+# acá el experimento central es BARRER LA CANTIDAD DE CAPAS OCULTAS.
+#
+# Todo se entrena con el runner pausable/continuable:
+#     python3 ej3/run_resumable.py            # corre / reanuda todos los jobs
+#     python3 ej3/run_resumable.py --status   # ver progreso
+# Se pausa con Ctrl-C (guarda checkpoint) y se reanuda volviéndolo a correr.
+
+vae:
+  input_dim: 784                 # 28x28
+  latent_dim: 16                 # 16D: deja capacidad para que la PROFUNDIDAD
+                                 #      pueda mostrar efecto (con 2D todo sale
+                                 #      igual de borroso y enmascara el experimento).
+                                 #      Poné 2 si querés el manifold 2D estilo EJ2.
+  beta: 1.0                      # peso del KL (beta-VAE)
+  learning_rate: 0.001
+  batch_size: 128
+  epochs: 300                    # por arquitectura
+  seed: 42
+
+data:
+  path: "ej3/data/mnist.npz"
+  train_size: 30000              # subconjunto (0 = usar las 60000). Determinista.
+  test_size: 5000               # held-out para medir generalización (0 = 10000)
+  data_seed: 0                   # fija qué subconjunto se toma (estable entre reanudaciones)
+
+runner:
+  checkpoint_every: 5            # guardar checkpoint cada N épocas (resiste corte de luz)
+  eval_every: 5                  # medir reconstrucción en test cada N épocas
+  log_every: 1                   # imprimir progreso cada N épocas
+
+# Experimento de PROFUNDIDAD: misma latente/épocas/lr/datos; sólo cambia el
+# número de capas ocultas. El decoder es el espejo del encoder.
+# Editá esta lista para agregar/quitar arquitecturas (el runner se adapta solo).
+experiments:
+  depth:
+    architectures:
+      - { name: "d1", encoder_hidden: [256],                 decoder_hidden: [256] }
+      - { name: "d2", encoder_hidden: [512, 256],            decoder_hidden: [256, 512] }
+      - { name: "d3", encoder_hidden: [512, 256, 128],       decoder_hidden: [128, 256, 512] }
+      - { name: "d4", encoder_hidden: [512, 384, 256, 128],  decoder_hidden: [128, 256, 384, 512] }

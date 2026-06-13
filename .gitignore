@@ -552,3 +552,8 @@ overnight.log
 ej2/results/long_*/snapshots/
 ej2/results/long_*/ckpt_model.npz
 ej2/results/long_*/ckpt_state.npz
+
+# EJ3 (VAE sobre MNIST): dataset y checkpoints regenerables/transitorios.
+ej3/data/raw/
+ej3/data/mnist.npz
+ej3/results/checkpoints/

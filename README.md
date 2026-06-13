@@ -25,6 +25,11 @@ activación (Glorot/He) y la derivación completa del VAE (ELBO, KL, reparametri
   escala de grises. Incluye gradient-check del backprop, espacio latente 2D,
   grilla generativa (manifold), muestreo, interpolación y experimentos de
   `latent_dim`, `beta` (β-VAE) y `kl_warmup`.
+- **EJ3 — VAE sobre MNIST (variante alternativa del EJ2, fuera del enunciado).**
+  El **mismo** VAE de EJ2 pero sobre **MNIST 28×28** (`input_dim=784`), con un
+  experimento de **profundidad** (1→4 capas ocultas) y un **runner pausable y
+  continuable** (checkpoints) para dejarlo entrenando y reanudar exacto. Ver
+  [`ej3/README.md`](ej3/README.md).
 
 ---
 
