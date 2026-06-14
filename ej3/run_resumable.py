@@ -336,11 +336,29 @@ def main():
     ap.add_argument("--no-gradcheck", action="store_true", help="saltea el gradient-check inicial")
     ap.add_argument("--config", type=str, default=os.path.join(EJ3_DIR, "config.yaml"),
                     help="ruta al config.yaml (por defecto ej3/config.yaml)")
+    ap.add_argument("--epochs", type=int, default=None,
+                    help="EXTENDER: lleva el target de épocas de cada job a este valor "
+                         "absoluto (reanuda y entrena lo que falte)")
+    ap.add_argument("--extend", type=int, default=None,
+                    help="EXTENDER: corre N épocas MÁS sobre el target del config "
+                         "(equivale a --epochs (config.epochs + N))")
     args = ap.parse_args()
 
     cfg = load_yaml(args.config)
     jobs = make_jobs(cfg)
     os.makedirs(CKPT_DIR, exist_ok=True)
+
+    # --- EXTENSIÓN: override del target de épocas (para seguir un experimento ya
+    #     terminado sin perder lo entrenado; reanuda desde el último checkpoint) ---
+    override_epochs = None
+    if args.epochs is not None:
+        override_epochs = int(args.epochs)
+    elif args.extend is not None:
+        override_epochs = int(cfg["vae"]["epochs"]) + int(args.extend)
+    if override_epochs is not None:
+        for j in jobs:
+            j["epochs"] = override_epochs
+        print(f"(extensión: target de épocas = {override_epochs} por job)")
 
     if args.reset:
         targets = jobs if args.reset == "all" else [j for j in jobs if j["id"] == args.reset]

@@ -4,10 +4,17 @@
 # gradchequeado). Lo único distinto es el dataset (MNIST, input_dim=784) y que
 # acá el experimento central es BARRER LA CANTIDAD DE CAPAS OCULTAS.
 #
+# === CONFIG OVERNIGHT (≈10 h) ===
+# 60.000 imágenes, 500 épocas, 2 realizaciones (semillas) por arquitectura.
 # Todo se entrena con el runner pausable/continuable:
 #     python3 ej3/run_resumable.py            # corre / reanuda todos los jobs
 #     python3 ej3/run_resumable.py --status   # ver progreso
 # Se pausa con Ctrl-C (guarda checkpoint) y se reanuda volviéndolo a correr.
+#
+# EXTENDER en el futuro (aunque ya haya terminado):
+#     python3 ej3/run_resumable.py --extend 300   # 300 épocas MÁS por job
+#     python3 ej3/run_resumable.py --epochs 1000  # llevar el target a 1000
+# (también podés editar `epochs` acá abajo: reanuda y entrena lo que falte.)
 
 vae:
   input_dim: 784                 # 28x28
@@ -17,26 +24,31 @@ vae:
                                  #      Poné 2 si querés el manifold 2D estilo EJ2.
   beta: 1.0                      # peso del KL (beta-VAE)
   learning_rate: 0.001
-  batch_size: 128
-  epochs: 300                    # por arquitectura
-  seed: 42
+  batch_size: 256                # batch grande: más eficiente con 60k imágenes
+  epochs: 500                    # por arquitectura y por semilla
+  seed: 42                       # fallback si no hay lista de semillas abajo
 
 data:
   path: "ej3/data/mnist.npz"
-  train_size: 30000              # subconjunto (0 = usar las 60000). Determinista.
-  test_size: 5000               # held-out para medir generalización (0 = 10000)
+  train_size: 0                  # 0 = usar las 60.000 (overnight). Poné 20000 para pruebas.
+  test_size: 5000                # held-out para medir generalización (0 = 10000)
   data_seed: 0                   # fija qué subconjunto se toma (estable entre reanudaciones)
 
 runner:
   checkpoint_every: 5            # guardar checkpoint cada N épocas (resiste corte de luz)
-  eval_every: 5                  # medir reconstrucción en test cada N épocas
-  log_every: 1                   # imprimir progreso cada N épocas
+  eval_every: 10                 # medir reconstrucción en test cada N épocas
+  log_every: 5                   # imprimir progreso cada N épocas
 
 # Experimento de PROFUNDIDAD: misma latente/épocas/lr/datos; sólo cambia el
 # número de capas ocultas. El decoder es el espejo del encoder.
-# Editá esta lista para agregar/quitar arquitecturas (el runner se adapta solo).
+# `seeds`: realizaciones por arquitectura (2 = una réplica para chequear que la
+# tendencia no es un outlier; el usuario pidió NO obsesionarse con la varianza).
+# El runner corre primero TODAS las arquitecturas con la 1ª semilla (barrido
+# completo en ~5 h) y después la 2ª (réplica), así un corte temprano ya deja el
+# experimento entero con una semilla.
 experiments:
   depth:
+    seeds: [42, 123]
     architectures:
       - { name: "d1", encoder_hidden: [256],                 decoder_hidden: [256] }
       - { name: "d2", encoder_hidden: [512, 256],            decoder_hidden: [256, 512] }

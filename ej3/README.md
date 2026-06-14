@@ -50,31 +50,52 @@ python3 ej3/analysis/mnist_vae.py
   `checkpoint_every` épocas (config). Si se corta la luz o lo matás con `kill -9`,
   perdés a lo sumo esas pocas épocas.
 
+### Extender en el futuro (aunque ya haya terminado)
+
+El experimento es **continuable hacia adelante**: si terminó las 500 épocas y
+querés más, no se re-entrena de cero, sigue desde donde quedó (restaura modelo +
+Adam + RNG).
+
+```bash
+python3 ej3/run_resumable.py --extend 300    # 300 épocas MÁS por job
+python3 ej3/run_resumable.py --epochs 1000   # llevar el target a 1000 (absoluto)
+```
+
+(También podés editar `epochs:` en el config y volver a correr: detecta que el
+checkpoint tiene menos épocas que el nuevo target y entrena sólo lo que falta.)
+Verificado: extender un job ya terminado **appendea** al historial, no reinicia.
+
 ### Otros comandos
 
 ```bash
-python3 ej3/run_resumable.py --only d2_L16     # un solo experimento
-python3 ej3/run_resumable.py --reset all       # borra checkpoints (¡de cero!)
-python3 ej3/run_resumable.py --no-gradcheck    # saltea el gradient-check inicial
+python3 ej3/run_resumable.py --only d2_L16_s42  # un solo experimento (arch+semilla)
+python3 ej3/run_resumable.py --reset all        # borra checkpoints (¡de cero!)
+python3 ej3/run_resumable.py --no-gradcheck     # saltea el gradient-check inicial
 ```
 
 ---
 
 ## Qué se configura (`ej3/config.yaml`)
 
-- `vae.latent_dim`: **16** por defecto (deja capacidad para que la profundidad
-  pueda mostrar efecto; con 2D todo sale igual de borroso y enmascara el
-  experimento). Poné `2` si querés el manifold 2D estilo EJ2.
-- `data.train_size` / `data.test_size`: subconjunto determinista de MNIST
-  (default 30000 / 5000; poné `0` para usar las 60000 / 10000 completas).
+Viene preparado para una corrida **overnight (≈10 h)**: 60.000 imágenes, 500
+épocas, 2 realizaciones (semillas) por arquitectura, latente 16, batch 256.
+
+- `vae.latent_dim`: **16** (deja capacidad para que la profundidad pueda mostrar
+  efecto; con 2D todo sale igual de borroso y enmascara el experimento). Poné
+  `2` si querés el manifold 2D estilo EJ2.
+- `data.train_size` / `data.test_size`: subconjunto determinista de MNIST.
+  **`0` = todas** (60000 / 10000). Para una prueba rápida poné `20000`.
 - `vae.epochs`, `batch_size`, `learning_rate`, `beta`: hiperparámetros comunes.
 - `runner.checkpoint_every` / `eval_every` / `log_every`.
-- `experiments.depth.architectures`: la lista de arquitecturas a barrer. Editala
-  para agregar/quitar profundidades; el runner se adapta solo.
+- `experiments.depth.seeds`: realizaciones por arquitectura (`[42, 123]` = 2).
+  Bajalo a `[42]` para ir más rápido (~5 h) o agregá una 3ª para más robustez.
+- `experiments.depth.architectures`: la lista de profundidades a barrer. Editala
+  para agregar/quitar; el runner se adapta solo.
 
-Para una corrida **overnight** más pesada: subí `train_size` a `0` (60000) y
-`epochs` a 500. Gracias al checkpointing, podés cortarla cuando necesites la
-máquina.
+**Tiempos medidos** (60k, batch 256, latente 16): ~4 s/época la red de 1 capa,
+~12 s/época la de 4 capas. 4 arquitecturas × 500 épocas × 2 semillas ≈ **10 h**.
+Si lo cortás, reanuda; el orden de los jobs deja un barrido completo de
+profundidad (1 semilla) listo en ~5 h.
 
 ---
 
