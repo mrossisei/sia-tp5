@@ -557,3 +557,5 @@ ej2/results/long_*/ckpt_state.npz
 ej3/data/raw/
 ej3/data/mnist.npz
 ej3/results/checkpoints/
+# pesos del EJ3 (grandes, regenerables); se commitean figuras + hists
+ej3/results/*_model.npz

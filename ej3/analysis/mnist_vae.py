@@ -13,6 +13,7 @@ Uso:
 
 import os
 import sys
+import glob
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if REPO_ROOT not in sys.path:
@@ -96,7 +97,7 @@ def fig_reconstructions(group, Xte, yte, n=10):
     _grid(axes[1], Xr, n, f"reconstruidas — {group['n_hidden']} capas ocultas "
                           f"(mejor réplica: {job['id']})")
     fig.tight_layout()
-    p = os.path.join(RESULTS_DIR, f"recon_{job['name']}.png")
+    p = os.path.join(RESULTS_DIR, f"recon_{job['name']}_L{job['latent_dim']}.png")
     fig.savefig(p, dpi=130, bbox_inches="tight"); plt.close(fig)
     return p
 
@@ -109,7 +110,7 @@ def fig_samples(group, n=40, seed=0):
     _grid(ax, samples, 10, f"muestras generadas z~N(0,I) — {group['n_hidden']} capas "
                            f"ocultas (mejor réplica: {job['id']})")
     fig.tight_layout()
-    p = os.path.join(RESULTS_DIR, f"samples_{job['name']}.png")
+    p = os.path.join(RESULTS_DIR, f"samples_{job['name']}_L{job['latent_dim']}.png")
     fig.savefig(p, dpi=130, bbox_inches="tight"); plt.close(fig)
     return p
 
@@ -127,7 +128,8 @@ def fig_curves(groups):
         ax.legend(fontsize=8); ax.grid(alpha=0.3)
     fig.suptitle("EJ3 — efecto de la PROFUNDIDAD sobre la reconstrucción", fontsize=12)
     fig.tight_layout()
-    p = os.path.join(RESULTS_DIR, "depth_curves.png")
+    lat = next(iter(groups.values()))["jobs"][0]["latent_dim"]
+    p = os.path.join(RESULTS_DIR, f"depth_curves_L{lat}.png")
     fig.savefig(p, dpi=130, bbox_inches="tight"); plt.close(fig)
     return p
 
@@ -163,7 +165,80 @@ def fig_depth_summary(groups):
     best = nh[int(np.argmin(mean_test))]
     ax1.set_title(f"EJ3 — ¿ayuda agregar capas?  (mejor test rec con {best} capas ocultas)")
     fig.tight_layout()
-    p = os.path.join(RESULTS_DIR, "depth_summary.png")
+    lat = next(iter(groups.values()))["jobs"][0]["latent_dim"]
+    p = os.path.join(RESULTS_DIR, f"depth_summary_L{lat}.png")
+    fig.savefig(p, dpi=130, bbox_inches="tight"); plt.close(fig)
+    return p
+
+
+def fig_manifold(job, n=20, span=3.0):
+    """Manifold 2D clásico del VAE: decodifica una grilla de z sobre
+    [-span, span]^2 y la tilea. Sólo tiene sentido con latente 2."""
+    vae = VAE.load(_paths(job["id"])[0])
+    grid = np.linspace(-span, span, n)
+    imgs = []
+    for yi in grid[::-1]:          # filas: z2 de mayor a menor
+        for xi in grid:            # columnas: z1 de menor a mayor
+            imgs.append(vae.decode(np.array([[xi, yi]]))[0])
+    fig, ax = plt.subplots(figsize=(8, 8))
+    _grid(ax, imgs, n, f"manifold latente 2D — {job['id']} (grilla z1×z2 en [-3,3])")
+    p = os.path.join(RESULTS_DIR, f"manifold_{job['name']}_L{job['latent_dim']}.png")
+    fig.savefig(p, dpi=130, bbox_inches="tight"); plt.close(fig)
+    return p
+
+
+def fig_latent_scatter(job, Xte, yte):
+    """Scatter del espacio latente (z=mu) coloreado por dígito. Sólo latente 2."""
+    vae = VAE.load(_paths(job["id"])[0])
+    mu = vae.encode(Xte)
+    fig, ax = plt.subplots(figsize=(6.5, 5.5))
+    sc = ax.scatter(mu[:, 0], mu[:, 1], c=yte, cmap="tab10", s=6, alpha=0.5)
+    ax.set_xlabel("z1"); ax.set_ylabel("z2")
+    ax.set_title(f"espacio latente 2D (test) — {job['id']}")
+    fig.colorbar(sc, ax=ax, ticks=range(10), label="dígito")
+    p = os.path.join(RESULTS_DIR, f"scatter_{job['name']}_L{job['latent_dim']}.png")
+    fig.savefig(p, dpi=130, bbox_inches="tight"); plt.close(fig)
+    return p
+
+
+def fig_interpolation(job, Xte, steps=10, pairs=6, seed=0):
+    """Interpola linealmente en el latente entre pares de dígitos y decodifica
+    (muestra que el espacio es continuo/sin huecos)."""
+    vae = VAE.load(_paths(job["id"])[0])
+    rng = np.random.default_rng(seed)
+    rows = []
+    for _ in range(pairs):
+        i, j = int(rng.integers(len(Xte))), int(rng.integers(len(Xte)))
+        za, zb = vae.encode(Xte[i:i+1])[0], vae.encode(Xte[j:j+1])[0]
+        for t in np.linspace(0.0, 1.0, steps):
+            rows.append(vae.decode(((1.0 - t) * za + t * zb)[None])[0])
+    fig, ax = plt.subplots(figsize=(steps, pairs))
+    _grid(ax, rows, steps, f"interpolación en el latente — {job['id']}")
+    p = os.path.join(RESULTS_DIR, f"interp_{job['name']}_L{job['latent_dim']}.png")
+    fig.savefig(p, dpi=130, bbox_inches="tight"); plt.close(fig)
+    return p
+
+
+def fig_latent_summary(arch="d2"):
+    """Figura clave del experimento de LATENTE: test_rec final vs dimensión
+    latente (escanea {arch}_L*_hist.npz). Independiente de la config."""
+    pts = []
+    for f in sorted(glob.glob(os.path.join(RESULTS_DIR, f"{arch}_L*_hist.npz"))):
+        h = np.load(f)
+        pts.append((int(h["latent_dim"]), float(h["test_rec"][-1]), float(h["rec"][-1])))
+    if len(pts) < 2:
+        return None
+    pts.sort()
+    lats = [p[0] for p in pts]
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.plot(lats, [p[1] for p in pts], "o-", label="test rec")
+    ax.plot(lats, [p[2] for p in pts], "s--", color="C2", label="train rec")
+    ax.set_xscale("log", base=2); ax.set_xticks(lats)
+    ax.set_xticklabels([str(l) for l in lats])
+    ax.set_xlabel("dimensión latente"); ax.set_ylabel("BCE de reconstrucción (menor = mejor)")
+    ax.set_title(f"EJ3 — efecto del LATENTE en la reconstrucción ({arch})")
+    ax.grid(alpha=0.3); ax.legend()
+    p = os.path.join(RESULTS_DIR, f"latent_summary_{arch}.png")
     fig.savefig(p, dpi=130, bbox_inches="tight"); plt.close(fig)
     return p
 
@@ -188,6 +263,19 @@ def main():
     paths.append(fig_curves(groups))
     if len(groups) >= 2:
         paths.append(fig_depth_summary(groups))
+
+    # visualizaciones de presentación (lucen el "que se vea bueno")
+    lat = next(iter(groups.values()))["jobs"][0]["latent_dim"]
+    bestjob = min((j for g in groups.values() for j in g["jobs"]),
+                  key=lambda j: float(_hist(j)["test_rec"][-1]))
+    paths.append(fig_interpolation(bestjob, Xte))
+    if lat == 2:
+        bj = _best_job(next(iter(groups.values())))
+        paths.append(fig_manifold(bj))
+        paths.append(fig_latent_scatter(bj, Xte, yte))
+    lp = fig_latent_summary("d2")
+    if lp:
+        paths.append(lp)
 
     print("\nfiguras generadas:")
     for p in paths:

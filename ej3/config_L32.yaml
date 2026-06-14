@@ -1,0 +1,23 @@
+# EJ3 — barrido de LATENTE sobre d2: latente 32 (más capacidad -> generación más nítida).
+vae:
+  input_dim: 784
+  latent_dim: 32
+  beta: 1.0
+  learning_rate: 0.001
+  batch_size: 256
+  epochs: 300
+  seed: 42
+data:
+  path: "ej3/data/mnist.npz"
+  train_size: 0
+  test_size: 5000
+  data_seed: 0
+runner:
+  checkpoint_every: 5
+  eval_every: 10
+  log_every: 5
+experiments:
+  depth:
+    seeds: [42]
+    architectures:
+      - { name: "d2", encoder_hidden: [512, 256], decoder_hidden: [256, 512] }

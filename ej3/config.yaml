@@ -48,7 +48,7 @@ runner:
 # experimento entero con una semilla.
 experiments:
   depth:
-    seeds: [42, 123]
+    seeds: [42]          # 123 = réplica, deshabilitada por ahora (correr en el futuro si se quiere)
     architectures:
       - { name: "d1", encoder_hidden: [256],                 decoder_hidden: [256] }
       - { name: "d2", encoder_hidden: [512, 256],            decoder_hidden: [256, 512] }
