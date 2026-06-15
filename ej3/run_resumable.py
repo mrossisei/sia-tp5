@@ -366,10 +366,17 @@ def main():
             print(f"no hay job con id '{args.reset}'")
             return
         for j in targets:
-            p = ckpt_path(j["id"])
-            if os.path.exists(p):
-                os.remove(p)
-                print(f"borrado checkpoint de {j['id']}")
+            # Borrar checkpoint Y artefactos finales (model/hist): si no, un
+            # --reset seguido de una corrida interrumpida antes de finalize()
+            # dejaría el analysis graficando datos viejos (stale).
+            removed = []
+            for p in (ckpt_path(j["id"]),
+                      os.path.join(RESULTS_DIR, f"{j['id']}_model.npz"),
+                      os.path.join(RESULTS_DIR, f"{j['id']}_hist.npz")):
+                if os.path.exists(p):
+                    os.remove(p)
+                    removed.append(os.path.basename(p))
+            print(f"reset {j['id']}: borrado {removed if removed else 'nada'}")
         write_manifest(jobs)
         return
 

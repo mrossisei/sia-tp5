@@ -14,7 +14,8 @@ activación (Glorot/He) y la derivación completa del VAE (ELBO, KL, reparametri
 ## 1. Ejercicios
 
 - **EJ1.a — Autoencoder básico.** AE con cuello de botella 2D sobre el dataset
-  `font.h` (32 letras de 7×5 = 35 píxeles). Objetivo: reconstruir cada letra con
+  `font.h` (32 letras de 7 filas × 5 columnas = 35 píxeles; el enunciado las
+  llama «5×7»). Objetivo: reconstruir cada letra con
   un error **≤ 1 píxel**. Incluye un estudio de arquitecturas, optimizadores,
   learning rate, activación y función de pérdida, además de un scatter del espacio
   latente y la generación de una "letra nueva".
@@ -69,8 +70,19 @@ sia-tp5/
 │   ├── experiments/            # latent_dim, beta, kl_warmup
 │   ├── main_vae.py             # entrypoint EJ2
 │   └── results/                # figuras + modelo (vae_model.npz)
+├── ej3/                        # VAE sobre MNIST (variante alternativa, extra)
+│   ├── config.yaml             # config del barrido de profundidad
+│   ├── config_L*.yaml          # barrido de dimensión latente (2/8/16/32/64)
+│   ├── data/build_mnist.py     # descarga + parseo IDX de MNIST (numpy puro)
+│   ├── experiments/depth_study.py
+│   ├── analysis/mnist_vae.py   # figuras (reusa ej2/models/vae.py)
+│   ├── run_resumable.py        # runner pausable/reanudable (checkpoints atómicos)
+│   ├── README.md               # cómo correr, pausar y extender EJ3
+│   └── results/                # figuras + historiales (modelos gitignored)
 ├── tests/
-│   └── smoke_shared.py         # smoke test de la librería compartida
+│   ├── smoke_shared.py         # smoke test de la librería compartida
+│   ├── smoke_vae.py            # gradient-check del VAE (analítico vs diferencias finitas)
+│   └── smoke_ej3_resume.py     # verifica que reanudar checkpoints es bit-idéntico
 ├── presentacion/               # presentación Beamer (LaTeX, tema Metropolis)
 ├── requirements.txt
 └── README.md
@@ -107,6 +119,20 @@ python3 tests/smoke_shared.py
 
 Verifica la carga de `font.h`, un gradient-check del MLP (MSE y BCE), un
 entrenamiento corto de AE y los inicializadores. Debe terminar con `SMOKE TEST OK`.
+
+El VAE (EJ2/EJ3) tiene su propio smoke test que automatiza el **gradient-check
+obligatorio** (backprop analítico vs diferencias finitas, varias seeds):
+
+```bash
+python3 tests/smoke_vae.py
+```
+
+El EJ3 tiene además un smoke test que comprueba que **reanudar un checkpoint da
+un resultado bit-idéntico** a entrenar sin cortes:
+
+```bash
+python3 tests/smoke_ej3_resume.py
+```
 
 ### EJ1.a — Autoencoder básico
 
@@ -179,6 +205,31 @@ python3 ej2/experiments/beta.py         # -> ej2/results/exp_beta.png
 python3 ej2/experiments/kl_warmup.py    # -> ej2/results/exp_kl_warmup.png
 python3 ej2/experiments/seeds.py        # -> ej2/results/exp_seeds.png (3 seeds, media ± std)
 ```
+
+### EJ3 — VAE sobre MNIST (variante alternativa, extra)
+
+El EJ3 reutiliza **el mismo** VAE del EJ2 sobre **MNIST 28×28** (`input_dim=784`),
+con un experimento de **profundidad** (1→4 capas ocultas) y un **barrido de
+dimensión latente** (2/8/16/32/64), todo con un runner **pausable y reanudable**.
+
+```bash
+python3 ej3/data/build_mnist.py          # descarga + parsea MNIST -> ej3/data/mnist.npz (requiere internet la 1ª vez)
+python3 ej3/run_resumable.py             # corre / reanuda todos los jobs (barrido de profundidad)
+python3 ej3/run_resumable.py --status    # ver progreso de cada job
+python3 ej3/analysis/mnist_vae.py        # genera las figuras
+```
+
+Se pausa con **Ctrl-C** (termina la época en curso, guarda checkpoint atómico y
+sale) y se reanuda **volviéndolo a correr** (continúa exacto desde el checkpoint).
+Para extender una corrida ya terminada: `--extend 300` (300 épocas más) o
+`--epochs 1000` (llevar el target a 1000). El barrido de latente usa los configs
+`config_L*.yaml` (`--config ej3/config_L32.yaml`). Detalle completo en
+[`ej3/README.md`](ej3/README.md).
+
+Resultados (VAE sobre MNIST): la **profundidad** óptima es 2 capas ocultas
+(más profundo empeora, típico de un fully-connected sin conexiones residuales); la
+**dimensión latente** satura en 16–32 (L2≈131 → L16≈67 → L32≈66.7 → L64≈67 de
+BCE de reconstrucción en test).
 
 ### Experimentos pesados (dejar corriendo de noche)
 
@@ -257,8 +308,12 @@ con max≤1):
   (todas llegan a max=0).
 - **Optimizador:** Adam @600 ép · Momentum @500 ép · GD @4300 ép (todos max=0).
 - **Learning rate (Adam):** 1e-4 @5400 · 5e-4 @1250 · 1e-3 @600 · 5e-3 @200 (todos max=0).
-- **Activación oculta:** tanh @600 (max=0) · relu @700 (max=0) · logística **no
-  converge** (max=7, 27/32 exactas).
+- **Activación oculta:** tanh @600 (max=0) · relu @700 (max=0) · logística
+  **converge mucho más lento y de forma inestable** (la sigmoide satura el
+  gradiente): a 6000 ép / 1 seed daba max=7 y parecía no converger, pero
+  des-censurada a 30.000 ép × 5 seeds alcanza max≤1 en **4/5 seeds**
+  (conv ~16.8k–28.5k ép) y termina 32/32 exactas en 3/5 (una seed queda en
+  max=9). Es ~30× más lenta que tanh/relu. Ver `exp_activation_logistic_30k.csv`.
 - **Pérdida:** BCE @600 (max=0) vs MSE max=3 (30/32) en 6000 épocas.
 
 ### EJ1.b — Denoising Autoencoder

@@ -67,7 +67,14 @@ def run_all(X):
 
 
 def _bars(ax, labels, results, idx, ylabel, title):
-    """Barra media ± std de la métrica idx (0=max_pixel, 1=conv_epoch)."""
+    """Barra media ± std de la métrica idx (0=max_pixel, 1=conv_epoch).
+
+    OJO (sesgo de censura): para conv_epoch la media/std se calculan SOLO sobre
+    las seeds que convergieron dentro de EPOCHS; una config parcialmente
+    censurada (p.ej. adam@1e-4 a 6000 ép) subestima el tiempo real. La anotación
+    'n/len(SEEDS)' al lado de cada barra expone cuántas convergieron; la versión
+    des-censurada (30000 ép) está en grid_full.py.
+    """
     means, stds, anns = [], [], []
     for lab in labels:
         vals = np.array([r[idx] for r in results[lab]], dtype=float)

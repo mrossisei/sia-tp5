@@ -482,6 +482,8 @@ class VAE:
         h_enc, _ = self._encoder_body(X)
         mu = h_enc @ self.Wmu.T + self.bmu
         logvar = h_enc @ self.Wlv.T + self.blv
+        logvar = np.clip(logvar, -30.0, 30.0)  # mismo clip que forward(): que el
+        # sigma reportado coincida con el que la red usa internamente (exp estable)
         return mu, logvar
 
     def decode(self, Z):

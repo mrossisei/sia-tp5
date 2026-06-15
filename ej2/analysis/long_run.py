@@ -43,11 +43,16 @@ def _snapshot_path(tag, ep):
 
 def plot_evolution(tag, epochs_list, image_shape, path, n_samples=8, z_seed=7):
     """Decodifica los MISMOS z con cada snapshot: cómo madura el decoder."""
+    rows = [ep for ep in epochs_list if os.path.exists(_snapshot_path(tag, ep))]
+    if not rows:
+        return
+    # Dimensión latente leída del propio snapshot (no hardcodeada): el z fijo
+    # debe tener la dim del modelo (los long runs usan 2, pero esto lo soporta
+    # para cualquier latente).
+    latent_dim = VAE.load(_snapshot_path(tag, rows[0])).latent_dim
     rng = np.random.default_rng(z_seed)
     # z fijos (los mismos para todas las filas -> la evolución es del modelo)
-    Z = rng.standard_normal(size=(n_samples, 2))
-
-    rows = [ep for ep in epochs_list if os.path.exists(_snapshot_path(tag, ep))]
+    Z = rng.standard_normal(size=(n_samples, latent_dim))
     fig, axes = plt.subplots(len(rows), n_samples,
                              figsize=(n_samples * 1.25, len(rows) * 1.35))
     axes = np.atleast_2d(axes)

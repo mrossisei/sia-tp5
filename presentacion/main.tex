@@ -144,8 +144,11 @@
     \end{column}
   \end{columns}
   \vfill
-  {\footnotesize \textbf{tanh} y \textbf{relu} convergen a max$=0$;
-   la \textbf{logistica} oculta \emph{no} converge (max$=7$, 27/32).
+  {\footnotesize \textbf{tanh} y \textbf{relu} convergen a max$=0$ @600--700;
+   la \textbf{logistica} oculta converge \emph{mucho mas lento} (la sigmoide
+   satura el gradiente): a 6000 ep parecia no converger (max$=7$), pero
+   des-censurada a 30000 ep $\times$5 seeds alcanza max$\le1$ en 4/5
+   (conv $\sim$17k--28k) y 32/32 en 3/5.
    \textbf{BCE} llega a max$=0$ @600; \textbf{MSE} se queda en max$=3$ (30/32) en 6000 ep.}
 \end{frame}
 
@@ -167,7 +170,7 @@
   \vfill
   {\footnotesize 5 seeds $[0,1,2,3,42]$ por config (media $\pm$ std).
    \textbf{adam@1e-3} y \textbf{momentum@1e-2}: max$=0$ en 5/5 seeds
-   (conv $750\pm184$ y $470\pm37$); \textbf{gd@1e-2} converge solo en 4/5
+   (conv $750\pm179$ y $470\pm40$); \textbf{gd@1e-2} converge solo en 4/5
    ($\sim$4300) y una seed queda en max$=2$. \textbf{adam@5e-3} es lo mas
    rapido y estable ($220\pm24$); \textbf{adam@1e-4} no alcanza en 6000 ep
    (2/5). Las conclusiones del estudio con seed unica se sostienen.}
@@ -533,7 +536,7 @@
   \vfill
   {\footnotesize Dataset re-generado a 24$\times$24 (1920 muestras, 120/clase),
    red $[576,512,128] \to 2 \to [128,512,576]$ (723k parametros), 30000 epocas.
-   Aca el computo \emph{si} se siente: $\sim$1.8 ep/s $\Rightarrow$
+   Aca el computo \emph{si} se siente: $\sim$1.0 ep/s $\Rightarrow$
    \textbf{8.4 h} de entrenamiento (overnight). rec\_MSE $3.05$ sobre 576
    pixeles; mas detalle fino que 16$\times$16 (dientes, petalos, llama).}
 \end{frame}
@@ -552,6 +555,11 @@
     \item \textbf{EJ2}: el VAE pasa el gradient-check ($1.25\times10^{-10}$),
           aprende un latente \emph{continuo} y permite \textbf{generar} emojis nuevos
           por muestreo e interpolacion.
+    \item \textbf{EJ3 (extra, fuera del enunciado)}: el \emph{mismo} VAE portado a
+          \textbf{MNIST 28$\times$28}, con un barrido de \textbf{profundidad}
+          (2 capas ocultas $\to$ optimo; mas profundo empeora) y de \textbf{dimension
+          latente} (satura en 16--32), corrido con un \emph{runner pausable y
+          reanudable} (resume bit-identico). Documentado en \texttt{ej3/}.
     \item \textbf{Computo (overnight)}: la grilla de 75 corridas separa fracasos
           reales de censura por presupuesto, y 50000 epocas bajan el rec\_MSE del
           VAE 2D de 4.6 a \textbf{1.3}: varias ``limitaciones'' eran tiempo de

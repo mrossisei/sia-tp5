@@ -4,8 +4,10 @@
 # gradchequeado). Lo único distinto es el dataset (MNIST, input_dim=784) y que
 # acá el experimento central es BARRER LA CANTIDAD DE CAPAS OCULTAS.
 #
-# === CONFIG OVERNIGHT (≈10 h) ===
-# 60.000 imágenes, 500 épocas, 2 realizaciones (semillas) por arquitectura.
+# === CONFIG OVERNIGHT (≈5 h con 1 semilla) ===
+# 60.000 imágenes, 500 épocas, 1 realización (semilla 42) por arquitectura.
+# La réplica (semilla 123) está deshabilitada (ver `seeds` abajo); activarla
+# duplica los jobs (~10 h). El usuario pidió NO obsesionarse con la varianza.
 # Todo se entrena con el runner pausable/continuable:
 #     python3 ej3/run_resumable.py            # corre / reanuda todos los jobs
 #     python3 ej3/run_resumable.py --status   # ver progreso

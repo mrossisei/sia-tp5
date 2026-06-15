@@ -22,7 +22,7 @@
 #      [576,512,128]->2->[128,512,576], 30000 épocas, checkpoint c/250
 #      -> ej2/data/emojis_24.npz + ej2/results/long_24px/            [~4-6 h]
 #
-# Total estimado: ~6-7 h (medido a ~11 ép/s la etapa 2 y ~1.8 ép/s la etapa 3).
+# Total estimado: ~10 h (medido a ~10 ép/s la etapa 2 y ~1.0 ép/s la etapa 3).
 # Los VAE largos guardan checkpoints atómicos: si a la mañana la etapa 3 sigue
 # corriendo, se puede cortar (Ctrl+C o kill) y el último checkpoint + figuras
 # parciales quedan usables; o continuarla luego con:
@@ -46,7 +46,7 @@ python3 ej2/experiments/vae_long.py --epochs 50000 --ckpt-every 1000 \
     --snapshot-every 1000
 echo "[etapa 2/3] terminada: $(date)"
 
-echo; echo "[etapa 3/3] dataset 24x24 + VAE grande (12000 épocas)"; echo
+echo; echo "[etapa 3/3] dataset 24x24 + VAE grande (30000 épocas)"; echo
 if [ ! -f ej2/data/emojis_24.npz ]; then
     python3 ej2/data/build_emojis.py --size 24 --per-class 120 \
         --out ej2/data/emojis_24.npz

@@ -140,23 +140,63 @@ def plot_learning_curve(losses, path, best_epoch=None):
 
 
 # ---------------------------------------------------- 1.a.4 generar letra nueva
-def plot_new_letter_generation(ae, X, labels, path, char_a="c", char_b="i",
+def plot_new_letter_generation(ae, X, labels, path, char_a="`", char_b="p",
                                n_steps=9):
-    """Interpola en linea recta entre los codigos de dos letras y decodifica.
+    """Interpola en linea recta entre los codigos de dos letras y decodifica,
+    VERIFICANDO que el punto medio sea una letra genuinamente nueva.
 
     Es el "Algoritmo del Autoencoder Generativo" (Autoencoders.pdf, slide 34):
     dejamos de lado el Encoder, especificamos valores de (z1, z2) de manera
     directa y cada tupla genera una muestra nueva via el Decoder. Interpolar
-    entre dos codigos conocidos elige puntos "seguros" del latente; el punto
-    medio NO corresponde a ninguna letra del set -> letra "nueva" (1.a.4).
+    entre dos codigos conocidos elige puntos "seguros" del latente.
+
+    Cuidado (1.a.4): que la COORDENADA latente del punto medio sea nueva NO
+    garantiza que la MUESTRA decodificada lo sea — el decoder puede mapear esa
+    coordenada de vuelta, tras binarizar, a un patron identico a una letra del
+    set (p.ej. el par 'c'->'i' colapsa a 'c'). Por eso medimos la novedad como
+    la distancia minima en pixeles del patron generado a las 32 letras y, si el
+    par pedido colapsa a una letra existente (dmin=0), buscamos de forma
+    determinista el par cuyo punto medio sea el MAS novedoso.
     """
+    Xi = np.asarray(X).astype(int)
+
+    def nearest(pat):
+        """(dist minima en pixeles, label) del patron binario pat (35,) al set."""
+        d = np.sum(Xi != pat[None, :], axis=1)
+        j = int(np.argmin(d))
+        return int(d[j]), labels[j]
+
     Z = ae.encode(X)
-    ia = labels.index(char_a)
-    ib = labels.index(char_b)
+
+    def midpoint_pattern(a, b):
+        return (ae.decode(0.5 * (Z[a] + Z[b])) >= 0.5).astype(int)[0]
+
+    ia, ib = labels.index(char_a), labels.index(char_b)
+    dmid, near_mid = nearest(midpoint_pattern(ia, ib))
+
+    # Verificacion de NOVEDAD: si el punto medio del par pedido coincide con una
+    # letra del set, buscar (determinista) el par cuyo punto medio tenga la mayor
+    # distancia minima al set, descartando patrones degenerados (casi vacios/llenos).
+    if dmid == 0:
+        best = None  # (dist, i, k)
+        for i in range(len(labels)):
+            for k in range(i + 1, len(labels)):
+                pat = midpoint_pattern(i, k)
+                if not (3 <= int(pat.sum()) <= 25):
+                    continue
+                d, _ = nearest(pat)
+                if best is None or d > best[0]:
+                    best = (d, i, k)
+        if best is not None:
+            _, ia, ib = best
+            char_a, char_b = labels[ia], labels[ib]
+            dmid, near_mid = nearest(midpoint_pattern(ia, ib))
+
     za, zb = Z[ia], Z[ib]
     alphas = np.linspace(0.0, 1.0, n_steps)
     codes = np.array([(1 - a) * za + a * zb for a in alphas])
     gen = (ae.decode(codes) >= 0.5).astype(int)
+    mid_idx = n_steps // 2
 
     fig = plt.figure(figsize=(n_steps * 1.3, 3.4))
     gs = fig.add_gridspec(2, n_steps, height_ratios=[3, 1])
@@ -168,8 +208,13 @@ def plot_new_letter_generation(ae, X, labels, path, char_a="c", char_b="i",
             ax.set_title(f"'{char_a}'", fontsize=10)
         elif j == n_steps - 1:
             ax.set_title(f"'{char_b}'", fontsize=10)
-        elif j == n_steps // 2:
-            ax.set_title("nueva", fontsize=10, color=PALETTE["highlight"])
+        elif j == mid_idx:
+            if dmid > 0:
+                ax.set_title(f"nueva\n(+{dmid}px vs '{near_mid}')",
+                             fontsize=9, color=PALETTE["highlight"])
+            else:
+                ax.set_title(f"= '{near_mid}'", fontsize=9,
+                             color=PALETTE["negative"])
     # Recta en el latente
     ax_l = fig.add_subplot(gs[1, :])
     ax_l.scatter(Z[:, 0], Z[:, 1], c="lightgray", s=20, zorder=1)
@@ -179,8 +224,11 @@ def plot_new_letter_generation(ae, X, labels, path, char_a="c", char_b="i",
                  zorder=3)
     ax_l.set_title("Recta de interpolacion en el espacio latente", fontsize=9)
     ax_l.set_xticks([]); ax_l.set_yticks([])
-    fig.suptitle(f"Generacion de letra nueva: interpolacion '{char_a}' -> '{char_b}'",
-                 fontsize=12)
+    novel = (f"punto medio a {dmid}px de la letra mas cercana ('{near_mid}') "
+             f"-> no pertenece al set" if dmid > 0
+             else f"punto medio = '{near_mid}' (no es nuevo)")
+    fig.suptitle(f"Generacion de letra nueva: interpolacion '{char_a}' -> "
+                 f"'{char_b}'  |  {novel}", fontsize=11)
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     save_fig(fig, path)
     return codes

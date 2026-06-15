@@ -10,7 +10,7 @@ con checkpoints periódicos (modelo + estado de Adam + historial), de modo que:
 Uso típico (ver run_overnight.sh):
   python3 ej2/experiments/vae_long.py --epochs 50000 --ckpt-every 1000
   python3 ej2/experiments/vae_long.py --data ej2/data/emojis_24.npz --tag 24px \
-          --encoder 512 128 --decoder 128 512 --epochs 12000 --ckpt-every 250
+          --encoder 512 128 --decoder 128 512 --epochs 30000 --ckpt-every 250
   python3 ej2/experiments/vae_long.py ... --resume   # continúa del último ckpt
 
 Salidas en ej2/results/long_{tag}/:
