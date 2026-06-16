@@ -1,0 +1,10 @@
+dataset,latent,active_units,kl_total,epochs
+mnist,2,2,7.9215,300
+mnist,8,8,17.8273,300
+mnist,16,16,22.5192,500
+mnist,32,17,22.4984,300
+mnist,64,16,22.4758,300
+emoji,2,2,5.7367,
+emoji,8,7,8.9492,
+emoji,16,6,9.1549,
+emoji,32,5,8.3908,

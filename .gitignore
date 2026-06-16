@@ -559,3 +559,7 @@ ej3/data/mnist.npz
 ej3/results/checkpoints/
 # pesos del EJ3 (grandes, regenerables); se commitean figuras + hists
 ej3/results/*_model.npz
+
+# Experimentos extra: cache de modelos regenerables (los datos crudos para
+# regraficar quedan en extra/results/*.csv y *.npz). Se commitean figuras + csv.
+extra/results/models/
