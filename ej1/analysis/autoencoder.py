@@ -7,6 +7,7 @@ Genera (en ej1/results/basic/):
   - pixel_error_hist.png      : histograma de pixel-error por patron
   - learning_curve.png        : curva de loss por epoca
   - new_letter_generation.png : generacion de letra nueva interpolando en el latente (1.a.4)
+  - random_latent_sampling.png: muestreo z random -> decoder (1.a.4, "es generativo?")
 """
 
 import numpy as np
@@ -234,6 +235,77 @@ def plot_new_letter_generation(ae, X, labels, path, char_a="`", char_b="p",
     return codes
 
 
+# ------------------------------------- 1.a.4 ¿es generativo? muestreo z random
+def plot_random_latent_sampling(ae, X, labels, path, n_show=24, n_stats=500,
+                                seed=0):
+    """Mete z RANDOM en el latente y decodifica — el test honesto de la consigna
+    1.a.4 ("generar una letra nueva") tomado en serio.
+
+    A diferencia de plot_new_letter_generation (que interpola entre dos codigos
+    REALES, eligiendo puntos "seguros"), aca sampleamos z uniformes en el rango
+    que ocupan los 32 codigos del AE y miramos QUE devuelve el decoder. El decoder
+    "lee" cualquier z (siempre da 35 valores en (0,1)), pero como el latente del
+    AE NO esta regularizado (cuello lineal, no acotado, sin densidad), un z random
+    casi nunca produce una letra nueva valida. Clasificamos cada decodificado en:
+      - colapsa : dmin==0, el patron binarizado es identico a una letra del set.
+      - basura  : degenerado (casi vacio <=2 px o casi lleno >=30 px).
+      - nuevo   : patron plausible (3..29 px) y distinto a las 32 letras.
+    El % de colapsos es el argumento central: el AE basico no es un modelo
+    generativo (motiva el VAE del EJ2, cuyo latente SI es N(0,I) sampleable).
+    """
+    Xi = np.asarray(X).astype(int)
+
+    def nearest(pat):
+        d = np.sum(Xi != pat[None, :], axis=1)
+        j = int(np.argmin(d))
+        return int(d[j]), labels[j]
+
+    Z = ae.encode(X)
+    lo, hi = Z.min(axis=0), Z.max(axis=0)
+    rng = np.random.default_rng(seed)
+
+    # --- Estadistica sobre n_stats muestras ---
+    Zs = rng.uniform(lo, hi, size=(n_stats, Z.shape[1]))
+    pats = (ae.decode(Zs) >= 0.5).astype(int)
+    sums = pats.sum(axis=1)
+    dmins = np.array([nearest(pats[k])[0] for k in range(n_stats)])
+    degen = (dmins >= 1) & ((sums <= 2) | (sums >= 30))
+    collapse = (dmins == 0)
+    novel = (~collapse) & (~degen)
+    pct_c = 100.0 * collapse.mean()
+    pct_d = 100.0 * degen.mean()
+    pct_n = 100.0 * novel.mean()
+
+    # --- Figura: grilla de las primeras n_show muestras, anotadas por categoria ---
+    ncols = 8
+    nrows = int(np.ceil(n_show / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 1.4, nrows * 1.7))
+    axes = np.atleast_2d(axes)
+    for k in range(nrows * ncols):
+        ax = axes[k // ncols, k % ncols]
+        ax.set_xticks([]); ax.set_yticks([])
+        if k >= n_show:
+            ax.axis("off"); continue
+        ax.imshow(pats[k].reshape(ROWS, COLS), cmap="Greys", vmin=0, vmax=1)
+        d, near = dmins[k], nearest(pats[k])[1]
+        if collapse[k]:
+            ax.set_title(f"= '{near}'", fontsize=8, color=PALETTE["negative"])
+        elif degen[k]:
+            ax.set_title("basura", fontsize=8, color="gray")
+        else:
+            ax.set_title(f"nueva +{d}px", fontsize=8, color=PALETTE["positive"])
+    fig.suptitle(
+        f"AE: {n_stats} z random uniformes en el rango del latente -> decoder\n"
+        f"colapsan a una letra existente: {pct_c:.0f}%   |   "
+        f"basura: {pct_d:.0f}%   |   nuevas plausibles: {pct_n:.0f}%   "
+        f"(el latente del AE no es generativo)",
+        fontsize=11, y=1.0)
+    fig.tight_layout(rect=[0, 0, 1, 0.93])
+    save_fig(fig, path)
+    return {"pct_collapse": pct_c, "pct_garbage": pct_d, "pct_novel": pct_n,
+            "n_stats": n_stats}
+
+
 def generate_all(ae, X, labels, out_dir, losses=None, best_epoch=None):
     """Genera todas las figuras del AE basico en out_dir. Devuelve dict de resumen."""
     import os
@@ -247,6 +319,7 @@ def generate_all(ae, X, labels, out_dir, losses=None, best_epoch=None):
     if losses is not None:
         plot_learning_curve(losses, p("learning_curve.png"), best_epoch=best_epoch)
     plot_new_letter_generation(ae, X, labels, p("new_letter_generation.png"))
+    plot_random_latent_sampling(ae, X, labels, p("random_latent_sampling.png"))
 
     summary = pixel_error_summary(X, ae.reconstruct(X))
     return summary
