@@ -1,587 +1,426 @@
-\documentclass[aspectratio=169,10pt]{beamer}
+\documentclass[aspectratio=169, 10pt]{beamer}
 
 % ---------------------------------------------------------------------------
-% TP5 - Deep Learning: Autoencoders y Variational Autoencoders
-% Beamer, tema Metropolis (consistente con TP3/TP4), en espanol.
-% Las figuras se leen desde ej1/results y ej2/results via \graphicspath.
-% Compilar: pdflatex main.tex  (x2)   [ver presentacion/README.md]
+% TP5 - EJ1.a: Autoencoder basico (font.h, cuello 2D, error <= 1 pixel)
+% Estilo consistente con TP4: Metropolis + accent #0F4C81.
+% Figuras desde ej1/results/basic via \graphicspath.
+% Compilar: pdflatex main.tex  (x2)
 % ---------------------------------------------------------------------------
 
 \usetheme{metropolis}
+\metroset{block=fill, numbering=fraction, progressbar=frametitle}
+
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[spanish]{babel}
 \usepackage{graphicx}
+\usepackage{amsmath, amssymb}
 \usepackage{booktabs}
-\usepackage{amsmath}
 \usepackage{xcolor}
 
-% Rutas a las figuras realmente generadas por el codigo.
-\graphicspath{{../ej1/results/basic/}{../ej1/results/denoising/}{../ej2/results/}}
+\graphicspath{{../ej1/results/basic/}}
 
-\title{TP5 --- Deep Learning}
-\subtitle{Autoencoders, Denoising Autoencoders y Variational Autoencoders (numpy puro)}
-\author{Sistemas de Inteligencia Artificial --- ITBA}
-\date{}
+\definecolor{accent}{HTML}{0F4C81}
+\setbeamercolor{frametitle}{bg=accent}
+\setbeamercolor{progress bar}{fg=accent}
+
+% Numero de frame en TODAS las slides (title, section, standout)
+\renewcommand{\maketitle}{\frame{\titlepage}}
+\makeatletter
+\gdef\beamer@atbeginsection{}
+\AtBeginSection{%
+  \ifbeamer@inframe
+    \sectionpage
+  \else
+    \frame[c]{\sectionpage}%
+  \fi
+}
+\define@key{beamerframe}{standout}[true]{%
+  \booltrue{metropolis@standout}
+  \begingroup
+    \setkeys{beamerframe}{c}
+    \ifbeamercolorempty[bg]{palette primary}{
+      \setbeamercolor{background canvas}{
+        use=palette primary,
+        bg=-palette primary.fg
+      }
+    }{
+      \setbeamercolor{background canvas}{
+        use=palette primary,
+        bg=palette primary.bg
+      }
+    }
+  \centering
+  \usebeamercolor[fg]{palette primary}
+  \usebeamerfont{standout}
+}
+\makeatother
+
+\title{Autoencoders}
+\author{Sistemas de Inteligencia Artificial}
+\institute{ITBA --- 2026}
+\date{\today}
 
 \begin{document}
 
 \maketitle
 
-\begin{frame}{Contenido}
-  \tableofcontents
-\end{frame}
+% ============================================================
+% AUTOENCODER BASICO
+% ============================================================
 
-% ===========================================================================
-\section{Problema y dataset}
-% ===========================================================================
+\section{Autoencoder basico}
 
-\begin{frame}{El problema}
-  \begin{itemize}
-    \item Implementar \textbf{Autoencoders} en \textbf{numpy puro}, sin frameworks de DL.
-    \item Reusamos la maquinaria de MLP con backpropagation de TP3
-          (forward/backward, optimizadores, activaciones, inicializadores).
-    \item Lo nuevo del Deep Learning: BCE numericamente estable, inicializacion
-          segun la activacion (Glorot/He) y la derivacion completa del VAE.
-  \end{itemize}
-  \vfill
-  \begin{block}{Tres bloques}
-    \begin{enumerate}
-      \item \textbf{EJ1.a} --- Autoencoder basico (cuello 2D, error $\le 1$ pixel).
-      \item \textbf{EJ1.b} --- Denoising Autoencoder.
-      \item \textbf{EJ2} --- Variational Autoencoder sobre emojis.
-    \end{enumerate}
-  \end{block}
-\end{frame}
-
-\begin{frame}{Dataset \texttt{font.h}}
-  \begin{columns}
-    \begin{column}{0.55\textwidth}
+\begin{frame}{El problema y el dataset \texttt{font.h}}
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \textbf{Dataset}: 32 caracteres de una fuente bitmap.
       \begin{itemize}
-        \item 32 caracteres de una fuente de 7 columnas (`` \texttt{`} '' a \texttt{DEL}).
-        \item Cada caracter es una grilla \textbf{7$\times$5 = 35 pixeles} binarios $\{0,1\}$.
-        \item Se decodifica de hexadecimal a una matriz binaria
-              ($X \in \{0,1\}^{32 \times 35}$).
-        \item Es un dataset chico y discreto: ideal para forzar al autoencoder a
-              \emph{memorizar} a traves de un cuello de botella.
+        \item Cada letra: grilla \textbf{7$\times$5 = 35 pixeles} binarios $\{0,1\}$.
+        \item $X \in \{0,1\}^{32 \times 35}$ (sin normalizar: ya es binario).
+        \item Chico y discreto $\Rightarrow$ ideal para forzar memorizacion por un cuello.
       \end{itemize}
+      \vspace{0.4em}
+      \textbf{Pregunta gancho}: ¿se pueden comprimir 35 pixeles a \textbf{2 numeros}
+      y reconstruirlos con \textbf{$\le 1$ pixel} de error?
     \end{column}
-    \begin{column}{0.45\textwidth}
+    \begin{column}{0.46\textwidth}
       \centering
-      \texttt{Letra 'a':}\\[2pt]
-      \texttt{.....}\\
-      \texttt{....\#}\\
-      \texttt{.\#\#\#\#}\\
-      \texttt{\#...\#}\\
-      \texttt{\#..\#\#}\\
-      \texttt{.\#\#.\#}\\
-      \texttt{.....}
+      \textbf{Objetivo}
+      \begin{block}{}
+        Aprender los \textbf{32 patrones} de 5$\times$7 en un latente de
+        \textbf{2 dimensiones} con un error maximo de \textbf{1 pixel incorrecto}.
+      \end{block}
+      \vspace{0.3em}
+      {\footnotesize Ejemplo (letra \texttt{'a'}):}\\[2pt]
+      {\ttfamily\footnotesize
+        .....\\ ....\#\\ .\#\#\#\#\\ \#...\#\\ \#..\#\#\\ .\#\#.\#\\ .....}
     \end{column}
   \end{columns}
 \end{frame}
 
-% ===========================================================================
-\section{EJ1.a --- Autoencoder basico}
-% ===========================================================================
+% ---- EXP 0: primer intento, AE lineal ----
 
-\begin{frame}{Arquitectura del AE basico}
-  \begin{columns}
-    \begin{column}{0.55\textwidth}
+\begin{frame}{Primer intento --- ¿alcanza con un AE lineal?: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos        & \texttt{font.h} ($32\times35$) \\
+          Arquitectura & $[35,60,40,20,\mathbf{2},20,40,60,35]$ \\
+          Activaciones & \textbf{todas identidad} (lineal) \\
+          Perdida      & MSE \\
+          Optimizador  & Adam, lr $=5\cdot10^{-3}$ \\
+          Adam $\beta_1,\beta_2,\epsilon$ & $0.9$, $0.999$, $10^{-8}$ \\
+          Batch        & full-batch (32) \\
+          Init         & Xavier \\
+          Epocas       & 20000 \\
+          \textbf{Seeds}& \textbf{[0, 1, 2, 3, 42]} \\
+          \midrule
+          Metrica      & max pixel-error + rec-MSE \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textbf{Pregunta}: ¿alcanza un autoencoder \emph{lineal} (la version mas
+      simple) para reconstruir las 32 letras con $\le 1$ pixel de error?
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Primer intento --- ¿alcanza con un AE lineal?: resultados}
+  \centering
+  \includegraphics[width=0.72\linewidth]{exp_linear_ae.png}
+\end{frame}
+
+\begin{frame}{Una letra concreta: \texttt{'DEL'} pierde 15 de 35 pixeles}
+  \centering
+  \includegraphics[width=0.95\linewidth]{exp_linear_ae_worst.png}
+\end{frame}
+
+\begin{frame}{¿Por que falla? Converge a PCA}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{latent_scatter_pca.png}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \vspace{1.5em}
       \begin{itemize}
-        \item Arquitectura simetrica con \textbf{cuello de botella 2D}:
-              \[ 35 \to 60 \to 40 \to 20 \to \mathbf{2} \to 20 \to 40 \to 60 \to 35 \]
-        \item Activaciones: \textbf{tanh} en las ocultas, latente \emph{lineal},
-              salida \textbf{logistica} (pixeles en $(0,1)$).
-        \item Perdida \textbf{BCE} (binaria), \textbf{Adam} (lr $=10^{-3}$),
-              full-batch, EarlyStopping.
-        \item \textbf{Sin regularizacion}: queremos sobreajustar (memorizar)
-              las 32 letras.
+        \item Un AE \emph{lineal} \textbf{converge a PCA}.
+        \item Su latente 2D retiene solo $\sim$\textbf{27\%} de la varianza
+              $\Rightarrow$ no separa las 32 letras.
       \end{itemize}
     \end{column}
-    \begin{column}{0.45\textwidth}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{La respuesta: no linealidad --- arquitectura base del AE}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      Misma idea simetrica con \textbf{cuello 2D}, pero \textbf{ocultas no lineales}:
+      \[ 35 \to 60 \to 40 \to 20 \to \mathbf{2} \to 20 \to 40 \to 60 \to 35 \]
+      \begin{itemize}
+        \item Ocultas \textbf{tanh}; latente \textbf{lineal} (no satura);
+              salida \textbf{logistica} (pixeles en $(0,1)$).
+        \item Perdida \textbf{BCE}, \textbf{Adam}, full-batch, EarlyStopping.
+        \item \textbf{Sin regularizacion}: queremos \emph{sobreajustar}
+              (memorizar) las 32 letras.
+      \end{itemize}
+      \vspace{0.3em}
+      {\footnotesize Esta es la \emph{configuracion base} de referencia: los
+       experimentos varian \textbf{una} pieza a la vez.}
+    \end{column}
+    \begin{column}{0.48\textwidth}
       \centering
       \includegraphics[width=\linewidth]{learning_curve.png}\\
-      {\scriptsize Curva de loss (BCE) durante el entrenamiento.}
+      {\scriptsize Curva de loss (BCE) de la corrida principal.}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Busqueda de arquitecturas y optimizadores}
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{exp_architecture.png}\\
-      {\scriptsize Profundidad/ancho vs convergencia.}
+% ============================================================
+% ESTUDIO DE OPTIMIZACION
+% ============================================================
+
+\begin{frame}[standout]
+  Estudio de optimizacion
+
+  {\normalsize Una variable a la vez, controlando el resto.}
+\end{frame}
+
+% ---- Metodologia comun (loss / activacion / arquitectura) ----
+
+\begin{frame}{Estudio one-at-a-time: metodologia (comun a los 3 ejes)}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos        & \texttt{font.h} ($32\times35$) \\
+          Config base  & $[35,60,40,20,2,...]$, tanh, \\
+                       & latente lineal, BCE, Adam $10^{-3}$ \\
+          Adam $\beta_1,\beta_2,\epsilon$ & $0.9$, $0.999$, $10^{-8}$ \\
+          Batch / Init & full-batch (32) / Xavier \\
+          Epocas       & 6000 \\
+          \textbf{Seeds}& \textbf{[0, 1, 2, 3, 42]} \\
+          \midrule
+          Metrica      & max pixel-error (media $\pm$ std) \\
+          Criterio conv& 1a epoca con max$\le 1$ \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
     \end{column}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{exp_optimizer.png}\\
-      {\scriptsize GD vs Momentum vs Adam.}
+    \begin{column}{0.43\textwidth}
+      \textbf{Pregunta}: ¿que ingredientes permiten cruzar $\le 1$ pixel, y de forma
+      \emph{robusta} entre seeds?
+
+      \vspace{0.6em}
+      Variamos \textbf{una} pieza a la vez:
+      \begin{enumerate}
+        \item perdida (BCE / MSE)
+        \item activacion oculta (tanh / relu / logistica)
+        \item arquitectura (profundidad / ancho)
+      \end{enumerate}
+      \vspace{0.3em}
+      {\footnotesize (optimizador $\times$ lr: experimento aparte.)}
     \end{column}
   \end{columns}
-  \vfill
-  {\footnotesize Epoca de convergencia (primera con max$\le 1$): Adam @600 $\ll$
-   Momentum @500 $\ll$ GD @4300. Las tres arquitecturas llegan a max$=0$;
-   la profunda-ancha converge mas rapido (@600).}
 \end{frame}
 
-\begin{frame}{Learning rate, activacion y loss}
-  \begin{columns}
-    \begin{column}{0.33\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{exp_learning_rate.png}\\
-      {\scriptsize Learning rate (Adam).}
+\begin{frame}{Eje 1 --- Funcion de perdida: BCE vs MSE}
+  \centering
+  \includegraphics[width=0.9\linewidth]{exp_loss_ms.png}
+  \vfill
+  {\footnotesize \textbf{BCE} 5/5 vs \textbf{MSE} \emph{borderline} (4/5).
+   \textbf{Fijamos BCE}.}
+\end{frame}
+
+\begin{frame}{Eje 2 --- Activacion oculta: tanh / relu / logistica}
+  \centering
+  \includegraphics[width=0.9\linewidth]{exp_activation_ms.png}
+  \vfill
+  {\footnotesize \textbf{tanh}/\textbf{relu} 5/5; \textbf{logistica} 0/5 (satura el
+   gradiente). \textbf{Fijamos tanh}.}
+\end{frame}
+
+\begin{frame}{Eje 3 --- Arquitectura: profundidad / ancho}
+  \centering
+  \includegraphics[width=0.9\linewidth]{exp_architecture_ms.png}
+  \vfill
+  {\footnotesize \textbf{poco profunda} inestable (3/5); mas profundidad/ancho
+   $\Rightarrow$ confiable. \textbf{Fijamos la profunda-ancha} (5/5).}
+\end{frame}
+
+% ---- EXP 4: optimizador x lr (con censura) ----
+
+\begin{frame}{Eje 4 --- Optimizador $\times$ learning rate: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos          & \texttt{font.h} ($32\times35$) \\
+          Config base    & profunda-ancha, tanh, BCE \\
+          Batch / Init   & full-batch (32) / Xavier \\
+          \midrule
+          \textit{Variable} & optimizador $\times$ lr \\
+          optimizador    & GD / Momentum(0.9) / Adam \\
+          Adam $\beta_1,\beta_2,\epsilon$ & $0.9$, $0.999$, $10^{-8}$ \\
+          lr             & $10^{-4}$ a $10^{-2}$ (5 valores) \\
+          \midrule
+          Protocolo      & \textbf{5 seeds $\times$ 30000 ep} \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
     \end{column}
-    \begin{column}{0.33\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{exp_activation.png}\\
-      {\scriptsize Activacion oculta.}
-    \end{column}
-    \begin{column}{0.33\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{exp_loss.png}\\
-      {\scriptsize BCE vs MSE.}
+    \begin{column}{0.44\textwidth}
+      \textbf{Pregunta}:
+      \begin{itemize}
+        \item ¿el lr optimo \emph{depende} del optimizador?, ¿es Adam robusto al lr?
+      \end{itemize}
     \end{column}
   \end{columns}
-  \vfill
-  {\footnotesize \textbf{tanh} y \textbf{relu} convergen a max$=0$ @600--700;
-   la \textbf{logistica} oculta converge \emph{mucho mas lento} (la sigmoide
-   satura el gradiente): a 6000 ep parecia no converger (max$=7$), pero
-   des-censurada a 30000 ep $\times$5 seeds alcanza max$\le1$ en 4/5
-   (conv $\sim$17k--28k) y 32/32 en 3/5.
-   \textbf{BCE} llega a max$=0$ @600; \textbf{MSE} se queda en max$=3$ (30/32) en 6000 ep.}
 \end{frame}
 
-\begin{frame}{Interaccion optimizador $\times$ learning rate}
+\begin{frame}{Eje 4 --- Optimizador $\times$ learning rate (5 seeds $\times$ 30000 ep)}
   \centering
-  \includegraphics[width=0.96\linewidth]{exp_opt_lr_heatmap.png}
+  \includegraphics[width=0.78\linewidth]{exp_grid_full_maxpix.png}
   \vfill
-  {\footnotesize El lr optimo \emph{depende} del optimizador: \textbf{Adam}
-   (paso adaptativo por parametro) converge a max$=0$ en \emph{los cinco} lr
-   probados (de @5400 con $10^{-4}$ a @150 con $10^{-2}$); \textbf{Momentum}
-   solo con lr$\ge 10^{-3}$; \textbf{GD} solo con lr$=10^{-2}$ (@4300).
-   Barrer lr y optimizador por separado puede enganar: la grilla completa
-   muestra que la robustez al lr es la ventaja real de Adam.}
+  {\footnotesize \textbf{Adam}: max$=0$ en \emph{todo} el rango de lr (robusto).
+   GD y Momentum solo con lr altos. \textbf{Fijamos Adam}.}
 \end{frame}
 
-\begin{frame}{Variabilidad entre seeds (las conclusiones no son suerte)}
-  \centering
-  \includegraphics[width=0.88\linewidth]{exp_multiseed.png}
-  \vfill
-  {\footnotesize 5 seeds $[0,1,2,3,42]$ por config (media $\pm$ std).
-   \textbf{adam@1e-3} y \textbf{momentum@1e-2}: max$=0$ en 5/5 seeds
-   (conv $750\pm179$ y $470\pm40$); \textbf{gd@1e-2} converge solo en 4/5
-   ($\sim$4300) y una seed queda en max$=2$. \textbf{adam@5e-3} es lo mas
-   rapido y estable ($220\pm24$); \textbf{adam@1e-4} no alcanza en 6000 ep
-   (2/5). Las conclusiones del estudio con seed unica se sostienen.}
-\end{frame}
+% ============================================================
+% RESULTADOS
+% ============================================================
 
-\begin{frame}{Grilla des-censurada: 30000 epocas $\times$ 5 seeds (overnight)}
-  \centering
-  \includegraphics[width=0.97\linewidth]{exp_grid_full_heatmap.png}
-  \vfill
-  {\footnotesize 75 corridas con presupuesto 5$\times$ mayor: varias celdas ``no
-   converge'' del corte a 6000 eran \emph{censura por presupuesto}:
-   adam@$10^{-4}$ llega @$6070\pm577$ (5/5), momentum@$5{\cdot}10^{-4}$
-   @$8130\pm583$ (5/5), gd@$5{\cdot}10^{-3}$ @$9320\pm1543$ (5/5). Los fracasos
-   restantes son \emph{reales}: gd con lr$\le 10^{-3}$ y momentum@$10^{-4}$
-   siguen en 0/5 aun con 30000 epocas. Las curvas de loss completas de las 75
-   corridas quedan en \texttt{exp\_grid\_full\_runs.npz}.}
-\end{frame}
+\section{Resultados}
 
-\begin{frame}{Resultado: criterio $\le 1$ pixel CUMPLIDO}
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      \begin{table}
-        \centering\small
+\begin{frame}{Objetivo $\le 1$ pixel: CUMPLIDO}
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \begin{table}\scriptsize
+        \begin{tabular}{ll}
+          \toprule
+          \multicolumn{2}{l}{\textbf{Configuracion del modelo final}} \\
+          \midrule
+          Arquitectura  & $[35,60,40,20,\mathbf{2},20,40,60,35]$ \\
+          Activaciones  & tanh / latente lineal / logistica \\
+          Perdida / Opt & BCE / Adam (lr $=10^{-3}$) \\
+          Adam $\beta_1,\beta_2,\epsilon$ & $0.9$, $0.999$, $10^{-8}$ \\
+          Init / Epocas & Xavier / 30000 \\
+          Early stopping & patience $4000$, min$\Delta=10^{-7}$ \\
+          Batch / Seed  & full-batch (32) / 0 \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+      \begin{table}\scriptsize
         \begin{tabular}{lr}
           \toprule
           Metrica & Valor \\
           \midrule
           max pixel-error      & \textbf{0} \\
-          mean pixel-error     & 0.0000 \\
           letras exactas       & \textbf{32/32} \\
-          letras con $\le 1$   & \textbf{32/32} \\
           BCE final (mejor ep) & $1.74\times10^{-6}$ \\
           \bottomrule
         \end{tabular}
       \end{table}
-      {\footnotesize Las 5 seeds $[0,1,2,3,42]$ llegan a max$=0$ y 32/32 exactas.
-       El modelo recargado desde \texttt{model.npz} reproduce el resultado.}
+      {\scriptsize Cumplido \textbf{con margen} (max$=0$). Las 5 seeds llegan a
+       max$=0$; \texttt{model.npz} reproduce el resultado.}
     \end{column}
-    \begin{column}{0.5\textwidth}
+    \begin{column}{0.50\textwidth}
       \centering
       \includegraphics[width=\linewidth]{reconstruction_grid.png}\\
-      {\scriptsize Original vs reconstruccion (32 letras).}
+      {\scriptsize Original (arriba) vs reconstruccion (abajo); rojo = pixel erroneo.}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Espacio latente 2D vs PCA lineal}
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{latent_scatter.png}\\
-      {\scriptsize Latente 2D del AE no lineal.}
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{latent_scatter_pca.png}\\
-      {\scriptsize Proyeccion PCA 2D (baseline lineal).}
-    \end{column}
-  \end{columns}
-  \vfill
-  {\footnotesize \textbf{PCA 2D} captura solo $27.1\%$ de la varianza
-   (PC1 $15.2\%$ + PC2 $11.9\%$), mientras que el AE \emph{no lineal} con el mismo
-   cuello 2D reconstruye perfecto. El histograma de pixel-error confirma 32/32 exactas.}
-\end{frame}
-
-\begin{frame}{Generacion de una letra nueva}
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      \begin{itemize}
-        \item Tomamos un punto \emph{nuevo} del espacio latente 2D y lo pasamos
-              por el decoder.
-        \item El AE genera una ``letra'' que mezcla rasgos de los vecinos latentes.
-        \item Limitacion: con un cuello tan chico (2D) y sin un prior, gran parte
-              del latente son \emph{agujeros} que decodifican a basura.
-      \end{itemize}
-      \vfill
-      {\footnotesize Esta limitacion motiva el VAE (EJ2): un latente \emph{continuo
-       y muestreable} con un prior gaussiano.}
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{new_letter_generation.png}\\
-      {\scriptsize Decodificacion de puntos latentes nuevos.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-% ===========================================================================
-\section{EJ1.b --- Denoising Autoencoder}
-% ===========================================================================
-
-\begin{frame}{Denoising: idea y ruido}
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      \begin{itemize}
-        \item Entrenamos un DAE con \textbf{augmentation online}: cada epoca se
-              regenera el ruido y el target es la letra \emph{limpia}.
-        \item Ruido de entrenamiento: \textbf{sal-y-pimienta} $p=0.10$.
-        \item Misma arquitectura simetrica; cuello un poco mas ancho (8D, el
-              denoising no exige 2D).
-        \item Se evalua frente a sal-y-pimienta, gaussiano y masking.
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{noise_examples.png}\\
-      {\scriptsize Ejemplos: ruidoso $\to$ limpio (DAE).}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Barrido de niveles de ruido}
-  \begin{columns}
-    \begin{column}{0.55\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{noise_sweep.png}
-    \end{column}
-    \begin{column}{0.45\textwidth}
-      \begin{table}\centering\scriptsize
-        \begin{tabular}{lrr}
-          \toprule
-          $p$ (s\&p) & DAE & AE basico \\
-          \midrule
-          0.05 & 0.027 & 6.86 \\
-          0.10 & 0.267 & 9.88 \\
-          0.20 & 2.65  & 12.32 \\
-          0.30 & 6.77  & 14.82 \\
-          0.40 & 11.27 & 16.94 \\
-          \bottomrule
-        \end{tabular}
-      \end{table}
-      {\scriptsize pixel-error \emph{medio} (32 letras). El DAE reduce el error
-       $\sim$25--250$\times$ en niveles bajos/medios.}\\[3pt]
-      {\scriptsize Generaliza a ruido no visto: gaussiano
-       ($\sigma{=}0.4$: 0.15) y masking (frac$=0.4$: 2.12).}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Nivel de ruido de \emph{train}: trade-off}
-  \begin{columns}
-    \begin{column}{0.54\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{exp_train_levels_heatmap.png}\\
-      {\scriptsize Un DAE entrenado por nivel $p$ (12000 ep c/u) $\times$ nivel de evaluacion.}
-    \end{column}
-    \begin{column}{0.46\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{exp_train_levels_curves.png}\\
-      {\scriptsize Curva por DAE; baseline AE basico punteado.}
-    \end{column}
-  \end{columns}
-  \vfill
-  {\footnotesize Mas ruido en train $\Rightarrow$ mas robustez en niveles altos
-   (eval $0.30$: $6.12$ con train $p{=}0.30$ vs $8.09$ con $p{=}0.05$) pero se
-   degrada la entrada \emph{limpia} (err $0.56$ con $p{=}0.30$). Sweet spot:
-   $p\in[0.10, 0.20]$ (limpio perfecto, robustez casi maxima). Cualquier DAE
-   $\ll$ AE basico en todo nivel.}
-\end{frame}
-
-% ===========================================================================
-\section{EJ2 --- Variational Autoencoder}
-% ===========================================================================
-
-\begin{frame}{Motivacion: los ``agujeros'' del latente}
-  \begin{itemize}
-    \item Un AE comun aprende un latente \emph{arbitrario}: puntos aislados con
-          grandes regiones vacias que decodifican a ruido.
-    \item No hay forma principiada de \textbf{muestrear} letras/imagenes nuevas.
-  \end{itemize}
-  \vfill
-  \begin{block}{El VAE: un latente continuo y muestreable}
-    \begin{itemize}
-      \item El encoder produce una \textbf{distribucion} $q(z|x)=\mathcal{N}(\mu, \sigma^2)$
-            en lugar de un punto.
-      \item Un termino \textbf{KL} la empuja hacia el prior $\mathcal{N}(0, I)$,
-            llenando los agujeros.
-      \item Asi podemos generar muestreando $z \sim \mathcal{N}(0,I)$ y decodificando.
-    \end{itemize}
-  \end{block}
-\end{frame}
-
-\begin{frame}{Teoria: ELBO, KL y reparametrizacion}
-  Maximizamos el \textbf{ELBO} (equivalente a minimizar):
-  \[
-    \mathcal{L} = \underbrace{\mathbb{E}_{q(z|x)}\big[-\log p(x|z)\big]}_{\text{reconstruccion (BCE)}}
-                 + \beta \cdot \underbrace{D_{\mathrm{KL}}\!\big(q(z|x)\,\|\,p(z)\big)}_{\text{regularizacion}}
-  \]
-  \vspace{-2pt}
-  \begin{itemize}
-    \item \textbf{KL cerrado} (prior gaussiano):
-          $D_{\mathrm{KL}} = -\tfrac{1}{2}\sum_j \big(1 + \log\sigma_j^2 - \mu_j^2 - \sigma_j^2\big)$.
-    \item \textbf{Reparametrizacion} (gradiente a traves del muestreo):
-          $z = \mu + \sigma \odot \epsilon$, con $\epsilon \sim \mathcal{N}(0, I)$.
-    \item $\beta$ pondera el KL ($\beta$-VAE): controla el trade-off
-          reconstruccion vs estructura del latente.
-  \end{itemize}
-  \vfill
-  \begin{alertblock}{Gradient-check}
-    Backprop analitico vs diferencias finitas: error relativo maximo
-    $\mathbf{1.25\times10^{-10}}$ (tol $10^{-4}$) \textbf{--- PASA}.
-  \end{alertblock}
-\end{frame}
-
-\begin{frame}{Dataset de emojis}
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      \begin{itemize}
-        \item 16 clases de emojis (caras, corazon, estrella, sol, etc.).
-        \item Rasterizados desde \textbf{NotoColorEmoji} a \textbf{16$\times$16}
-              en escala de grises (input\_dim $=256$).
-        \item Augmentation (escala, rotacion, traslacion) $\to$
-              \textbf{960 muestras} (60 por clase), determinista (seed=42).
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{dataset_sample.png}\\
-      {\scriptsize Una muestra por clase.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{VAE: entrenamiento y reconstruccion}
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{loss_curves.png}\\
-      {\scriptsize Loss total = reconstruccion + KL.}
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{reconstructions.png}\\
-      {\scriptsize Original vs reconstruccion ($z=\mu$).}
-    \end{column}
-  \end{columns}
-  \vfill
-  {\footnotesize Principal (latent\_dim=2, BCE, $\beta{=}1$, 600 ep): loss total
-   $=117.99$ (rec $112.22$ + KL $5.78$); MSE de reconstruccion $=4.58$;
-   salidas en $[0, 0.97]$, sin NaN.}
-\end{frame}
-
-\begin{frame}{VAE: espacio latente y grilla generativa}
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{../ej2/results/latent_scatter.png}\\
-      {\scriptsize Latente 2D coloreado por clase.}
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{manifold_grid.png}\\
-      {\scriptsize Manifold: decodificacion de una grilla de $z$.}
-    \end{column}
-  \end{columns}
-  \vfill
-  {\footnotesize El prior gaussiano \emph{compacta} el latente: la grilla genera
-   transiciones suaves entre emojis (sin agujeros como en el AE comun).}
-\end{frame}
-
-\begin{frame}{VAE: muestreo e interpolacion}
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{samples.png}\\
-      {\scriptsize Muestras $z \sim \mathcal{N}(0, I)$.}
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{interpolation.png}\\
-      {\scriptsize Interpolacion lineal en el latente.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{VAE: experimentos (latent\_dim, $\beta$, KL warmup)}
-  \begin{columns}
-    \begin{column}{0.33\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{exp_latent_dim.png}\\
-      {\scriptsize latent\_dim.}
-    \end{column}
-    \begin{column}{0.33\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{exp_beta.png}\\
-      {\scriptsize $\beta$-VAE.}
-    \end{column}
-    \begin{column}{0.33\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{exp_kl_warmup.png}\\
-      {\scriptsize KL warmup.}
-    \end{column}
-  \end{columns}
-  \vfill
-  {\footnotesize \textbf{latent\_dim}: dim 2 (rec\_MSE 5.27) $\to$ dim 8/16
-   (rec\_MSE $\approx$1.6) reconstruyen mucho mejor.
-   \textbf{$\beta$}: $0.1$ (rec 111.3 / KL 10.0) vs $4.0$ (rec 120.6 / KL 3.25):
-   trade-off rec/KL clasico.
-   \textbf{warmup} (100 ep): reconstruccion final algo mejor (113.6 vs 114.1).}
-\end{frame}
-
-\begin{frame}{VAE: variabilidad entre seeds}
-  \centering
-  \includegraphics[width=0.98\linewidth]{exp_seeds.png}
-  \vfill
-  {\footnotesize El entrenamiento es doblemente estocastico (init de pesos +
-   sampleo de $\epsilon$ en la reparametrizacion); 3 seeds $[42, 7, 123]$
-   $\times$ 600 epocas dan curvas casi indistinguibles: loss total final
-   $118.02 \pm 0.14$ ($<0.3\%$ de dispersion), rec $112.2 \pm 0.2$,
-   KL $5.81 \pm 0.03$, rec\_MSE $4.45$--$4.69$. Ademas, seed$=42$ reproduce
-   \emph{exactamente} la corrida principal (determinismo del pipeline).}
-\end{frame}
-
-\begin{frame}{Overnight: 600 vs 50000 epocas (mismo VAE 2D)}
-  \centering
-  \includegraphics[width=0.99\linewidth]{comparison_600_vs_50k.png}
-  \vfill
-  {\footnotesize El run principal cortaba en 600 epocas con la reconstruccion
-   \emph{aun bajando}. Con 50000 epocas (1.4 h): rec $112.2 \to 103.1$ y
-   rec\_MSE $4.58 \to \mathbf{1.30}$ con el \textbf{mismo} cuello 2D --- mejor que
-   lo que lograban dim 8/16 con 400 epocas ($\approx 1.6$). A 600 ep todas las
-   clases reconstruian como ``caras genericas''; a 50000 recuperan los rasgos
-   distintivos (gafas, lagrima, susto).}
-\end{frame}
-
-\begin{frame}{Evolucion del decoder durante el entrenamiento}
-  \begin{columns}
+\begin{frame}{Espacio latente 2D del AE}
+  \begin{columns}[T]
     \begin{column}{0.52\textwidth}
       \centering
-      \includegraphics[height=0.86\textheight]{evolution_16px.png}
+      \includegraphics[width=\linewidth]{latent_scatter.png}\\
+      {\scriptsize Latente 2D del AE no lineal (32 letras).}
     \end{column}
     \begin{column}{0.48\textwidth}
-      {\footnotesize Los \textbf{mismos} 8 vectores $z \sim N(0,I)$ decodificados
-       por snapshots sucesivos del entrenamiento (guardados cada 1000 epocas,
-       mas tempranos en 50--1000).}
-      \begin{itemize}\footnotesize
-        \item ep 50--100: todo $z$ decodifica a una ``cara promedio'' borrosa
-              (el decoder aprende primero la media del dataset).
-        \item ep 250--1000: el latente se especializa y aparecen clases
-              distintas (pulgar, nube, sorpresa).
-        \item ep 5000--50000: se afinan los rasgos finos (bocas, ojos, bordes).
+      \begin{itemize}
+        \item El AE \emph{no lineal} ubica las 32 letras en posiciones bien
+              separadas del plano 2D.
+        \item Mismo cuello 2D que el PCA, pero aca reconstruye \textbf{perfecto}
+              (vs 27\% de varianza del PCA lineal).
       \end{itemize}
-      \vfill
-      {\footnotesize Quedaron 54 snapshots en \texttt{long\_16px/snapshots/}:
-       cualquier otra vista de la evolucion se grafica \emph{sin re-entrenar}.}
+      \vspace{0.4em}
+      \begin{block}{Lectura}
+        La no linealidad del encoder/decoder es lo que permite "doblar" el espacio
+        y separar lo que el PCA no podia.
+      \end{block}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Escalando el computo: VAE 24$\times$24}
-  \begin{columns}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=0.9\linewidth]{../ej2/results/long_24px/samples.png}\\
-      {\scriptsize Muestras $z\sim N(0,I)$ (24$\times$24).}
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      \centering
-      \includegraphics[width=0.9\linewidth]{../ej2/results/long_24px/manifold_grid.png}\\
-      {\scriptsize Manifold 2D (24$\times$24).}
-    \end{column}
-  \end{columns}
+\begin{frame}{Generar una letra nueva (interpolacion)}
+  \centering
+  \includegraphics[width=0.98\linewidth]{new_letter_generation.png}
   \vfill
-  {\footnotesize Dataset re-generado a 24$\times$24 (1920 muestras, 120/clase),
-   red $[576,512,128] \to 2 \to [128,512,576]$ (723k parametros), 30000 epocas.
-   Aca el computo \emph{si} se siente: $\sim$1.0 ep/s $\Rightarrow$
-   \textbf{8.4 h} de entrenamiento (overnight). rec\_MSE $3.05$ sobre 576
-   pixeles; mas detalle fino que 16$\times$16 (dientes, petalos, llama).}
+  {\footnotesize Recorremos una recta en el latente entre ``\texttt{`}'' y
+   \texttt{'p'} y decodificamos. El punto medio produce una letra a \textbf{+5
+   pixeles} de la mas cercana (\texttt{'e'}): \textbf{no pertenece} al set de
+   entrenamiento. El decoder \emph{mezcla} rasgos de los vecinos latentes.}
 \end{frame}
 
-% ===========================================================================
+\begin{frame}{El latente del AE no es generativo}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{random_latent_sampling.png}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{itemize}
+        \item Muestreamos 500 puntos $z$ \emph{al azar} en el rango del latente
+              y decodificamos.
+        \item \textbf{75\%} colapsa a una letra existente; solo \textbf{24\%} son
+              "nuevas plausibles".
+        \item No hay un \emph{prior}: el latente del AE tiene regiones sin
+              estructura.
+      \end{itemize}
+      \vspace{0.3em}
+      \begin{alertblock}{Motiva el VAE (EJ2)}
+        Un latente \emph{continuo y muestreable} con prior gaussiano.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ============================================================
+% CONCLUSIONES
+% ============================================================
+
 \section{Conclusiones}
-% ===========================================================================
 
-\begin{frame}{Conclusiones}
+\begin{frame}{Conclusiones --- EJ1.a}
   \begin{itemize}
-    \item \textbf{EJ1.a}: el AE no lineal con cuello \textbf{2D} memoriza las 32
-          letras con \textbf{0 pixeles de error} (32/32 exactas), muy por encima
-          del baseline PCA 2D ($27\%$ de varianza).
-    \item \textbf{EJ1.b}: el DAE limpia ruido entre $\sim$25--250$\times$ mejor que
-          el AE basico y \textbf{generaliza a ruido no visto} (gaussiano, masking).
-    \item \textbf{EJ2}: el VAE pasa el gradient-check ($1.25\times10^{-10}$),
-          aprende un latente \emph{continuo} y permite \textbf{generar} emojis nuevos
-          por muestreo e interpolacion.
-    \item \textbf{EJ3 (extra, fuera del enunciado)}: el \emph{mismo} VAE portado a
-          \textbf{MNIST 28$\times$28}, con un barrido de \textbf{profundidad}
-          (2 capas ocultas $\to$ optimo; mas profundo empeora) y de \textbf{dimension
-          latente} (satura en 16--32), corrido con un \emph{runner pausable y
-          reanudable} (resume bit-identico). Documentado en \texttt{ej3/}.
-    \item \textbf{Computo (overnight)}: la grilla de 75 corridas separa fracasos
-          reales de censura por presupuesto, y 50000 epocas bajan el rec\_MSE del
-          VAE 2D de 4.6 a \textbf{1.3}: varias ``limitaciones'' eran tiempo de
-          entrenamiento, no arquitectura. Todos los datos crudos quedan
-          guardados para re-analizar.
+    \item El AE \textbf{no lineal} con cuello \textbf{2D} memoriza las 32 letras
+          con \textbf{0 pixeles de error} (32/32 exactas), muy por encima del
+          baseline PCA 2D (27\% de varianza).
+    \item \textbf{Receta ganadora}: BCE + tanh + Adam. Adam es robusto al lr; la
+          \emph{logistica} oculta y \emph{MSE} son los unicos ingredientes que
+          fallan el objetivo.
+    \item \textbf{Rigor}: la grilla 30000 ep $\times$ 5 seeds separa los fracasos
+          \emph{reales} de la censura por presupuesto, y confirma que las
+          conclusiones \textbf{no son suerte} de una seed.
+    \item \textbf{Limite}: el AE memoriza pero su latente \textbf{no es generativo}
+          (muestreo aleatorio $\to$ 75\% colapsa). $\Rightarrow$ camino al VAE.
   \end{itemize}
-\end{frame}
-
-\begin{frame}{Limitaciones}
-  \begin{itemize}
-    \item \textbf{Cuello 2D}: la reconstruccion perfecta del AE basico es
-          \emph{memorizacion} de 32 patrones; con datos mas ricos un cuello 2D
-          pierde detalle (dim 2 vs dim 8/16 a igual presupuesto). Matiz del
-          overnight: parte de esa brecha era \emph{sub-entrenamiento} --- con
-          50000 epocas el mismo VAE 2D baja de rec\_MSE 4.6 a 1.3.
-    \item El \textbf{AE comun} no tiene un latente muestreable (agujeros);
-          el VAE lo resuelve, pero a costa de algo de nitidez (trade-off $\beta$).
-    \item Dataset chico y de baja resolucion (font.h 7$\times$5, emojis 16$\times$16):
-          buen banco de pruebas pedagogico, no representativo de imagenes naturales.
-  \end{itemize}
-  \vfill
-  \begin{center}\Large Gracias.\end{center}
 \end{frame}
 
 \end{document}

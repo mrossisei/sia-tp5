@@ -1,0 +1,41 @@
+eje,config,seed,max_pixel,conv_epoch
+loss,BCE,0,0,600
+loss,BCE,1,0,700
+loss,BCE,2,0,700
+loss,BCE,3,0,650
+loss,BCE,42,0,1050
+loss,MSE,0,2,700
+loss,MSE,1,2,
+loss,MSE,2,1,650
+loss,MSE,3,0,750
+loss,MSE,42,0,1350
+activacion,tanh,0,0,600
+activacion,tanh,1,0,700
+activacion,tanh,2,0,700
+activacion,tanh,3,0,650
+activacion,tanh,42,0,1050
+activacion,relu,0,0,700
+activacion,relu,1,0,600
+activacion,relu,2,0,500
+activacion,relu,3,0,600
+activacion,relu,42,0,600
+activacion,logistica,0,7,
+activacion,logistica,1,6,
+activacion,logistica,2,12,
+activacion,logistica,3,8,
+activacion,logistica,42,9,
+arquitectura,"poco profunda [35,20,2,20,35]",0,0,3650
+arquitectura,"poco profunda [35,20,2,20,35]",1,2,
+arquitectura,"poco profunda [35,20,2,20,35]",2,0,3250
+arquitectura,"poco profunda [35,20,2,20,35]",3,2,
+arquitectura,"poco profunda [35,20,2,20,35]",42,0,4250
+arquitectura,"media [35,30,15,2,15,30,35]",0,0,2800
+arquitectura,"media [35,30,15,2,15,30,35]",1,0,1450
+arquitectura,"media [35,30,15,2,15,30,35]",2,0,1900
+arquitectura,"media [35,30,15,2,15,30,35]",3,0,2300
+arquitectura,"media [35,30,15,2,15,30,35]",42,0,2450
+arquitectura,"profunda-ancha [35,60,40,20,2,...]",0,0,600
+arquitectura,"profunda-ancha [35,60,40,20,2,...]",1,0,700
+arquitectura,"profunda-ancha [35,60,40,20,2,...]",2,0,700
+arquitectura,"profunda-ancha [35,60,40,20,2,...]",3,0,650
+arquitectura,"profunda-ancha [35,60,40,20,2,...]",42,0,1050
