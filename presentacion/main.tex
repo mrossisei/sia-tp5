@@ -13,12 +13,13 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[spanish]{babel}
+\spanishdecimal{.}
 \usepackage{graphicx}
 \usepackage{amsmath, amssymb}
 \usepackage{booktabs}
 \usepackage{xcolor}
 
-\graphicspath{{../ej1/results/basic/}{../ej1/results/denoising/}}
+\graphicspath{{../ej1/results/basic/}{../ej1/results/denoising/}{../ej2/results/long_16px/}{../ej2/results/}}
 
 \definecolor{accent}{HTML}{0F4C81}
 \setbeamercolor{frametitle}{bg=accent}
@@ -585,7 +586,7 @@
 \end{frame}
 
 % ============================================================
-% CONCLUSIONES
+% CONCLUSIONES EJ1
 % ============================================================
 
 \section{Conclusiones}
@@ -602,6 +603,315 @@
     \item \textbf{Límite del AE}: el espacio latente \textbf{no tiene estructura}; muestrear
           puntos arbitrarios no genera letras válidas. $\Rightarrow$ necesitamos un espacio
           latente organizado.
+  \end{itemize}
+\end{frame}
+
+% ============================================================
+% EJ2: AUTOENCODER VARIACIONAL (VAE)
+% ============================================================
+
+\section{Autoencoder Variacional (VAE)}
+
+\begin{frame}{Planteo del VAE}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos         & emojis $16\!\times\!16$ gris \\
+                        & 16 clases, 60/clase (960) \\
+          Encoder       & $256\!\to\!256\!\to\!64\!\to\!(\mu,\log\sigma^2)\!\in\!\mathbb{R}^2$ \\
+          Decoder       & $\mathbb{R}^2\!\to\!64\!\to\!256\!\to\!256$ \\
+          Activaciones  & ReLU (ocultas) / logistica (salida) \\
+                        & identidad ($\mu$, $\log\sigma^2$) \\
+          Loss / Opt    & BCE $+$ $\beta\cdot$KL / Adam $10^{-3}$ \\
+          $\beta$ / Batch & 1.0 / 64 \\
+          Epocas / Seed & 50.000 / 42 \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textbf{Diferencia con el AE:} el encoder produce los
+      \emph{parametros} de $q(z|x)=\mathcal{N}(\mu,\sigma^2)$, no $z$ directo.
+
+      \vspace{0.5em}
+      $z = \mu + \sigma \odot \varepsilon$,\quad $\varepsilon\!\sim\!\mathcal{N}(0,I)$
+
+      \vspace{0.5em}
+      {\footnotesize El KL regulariza el latente hacia $p(z)=\mathcal{N}(0,I)$:
+       el espacio queda \textbf{organizado} y permite samplear puntos nuevos
+       con sentido.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{El dataset: emojis $16\!\times\!16$}
+  \centering
+  \includegraphics[width=0.84\linewidth]{dataset_sample.png}
+  \vfill
+  {\footnotesize 16 clases (caras, corazon, estrella, sol, nube, luna, fuego,
+   flor, pulgar), 60 variaciones por clase --- 960 imagenes en escala de grises.}
+\end{frame}
+
+\begin{frame}{Curvas de aprendizaje}
+  \centering
+  \includegraphics[width=0.94\linewidth]{vae_loss_panels.png}
+  \vfill
+  {\footnotesize \textbf{Rec} baja: el decoder aprende a reconstruir.
+   \textbf{KL} sube y se estabiliza: el encoder organiza el latente.}
+\end{frame}
+
+\begin{frame}{El latente se organiza}
+  \centering
+  \includegraphics[width=0.70\linewidth]{../ej2/results/long_16px/latent_scatter.png}
+  \vfill
+  {\footnotesize Cada punto es $\mu(x)$. El KL forzo el latente hacia
+   $\mathcal{N}(0,I)$: clusters por clase cerca del origen,
+   \textbf{continuos y separados}.}
+\end{frame}
+
+\begin{frame}{Reconstruccion}
+  \centering
+  \includegraphics[width=0.92\linewidth]{reconstructions.png}
+  \vfill
+  {\footnotesize Arriba: original; abajo: $\hat{x}$ con $z=\mu$ (deterministico).
+   Fiel en las 16 clases.}
+\end{frame}
+
+\begin{frame}{Manifold generativo}
+  \centering
+  \includegraphics[height=0.72\textheight]{manifold_grid.png}
+  \vfill
+  {\footnotesize Grilla $15\!\times\!15$ en el latente decodificada (percentiles del
+   prior $\mathcal{N}(0,I)$). \textbf{Todo punto produce un emoji valido}:
+   el espacio latente es continuo.}
+\end{frame}
+
+\begin{frame}{Generacion: nuevas muestras}
+  \centering
+  \includegraphics[height=0.72\textheight]{samples.png}
+  \vfill
+  {\footnotesize $z\sim\mathcal{N}(0,I)$ decodificados: el VAE genera imagenes
+   \textbf{nuevas y reconocibles} del dataset (consigna 2.c $\checkmark$).}
+\end{frame}
+
+\begin{frame}{Interpolacion en el latente}
+  \centering
+  \includegraphics[width=0.92\linewidth]{interpolation.png}
+  \vfill
+  {\footnotesize Recta entre los centroides $\mu$ de dos clases: la transicion
+   es \textbf{suave y continua} gracias al latente organizado.}
+\end{frame}
+
+% ------------ Experimentos VAE --------------------------------
+
+\begin{frame}{Estudio 1 --- dimension del latente: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos         & emojis $16\!\times\!16$ (960) \\
+          Arquitectura  & encoder/decoder simetricos \\
+          Activaciones  & ReLU / logistica / identidad \\
+          Loss / Opt    & BCE $+$ KL / Adam $10^{-3}$ \\
+          $\beta$ / Batch & 1.0 / 64 \\
+          Epocas        & 400 \\
+          \textbf{Seeds}& \textbf{[0, 1, 2, 3, 42]} \\
+          Metrica       & rec MSE $+$ calidad visual \\
+                        & muestras $z\!\sim\!\mathcal{N}(0,I)$ \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textit{Variable}: \textbf{dim latente} $\in \{2, 8, 16\}$.
+
+      \vspace{0.6em}
+      \textbf{Pregunta}: ¿cuantas dimensiones necesita el espacio latente?
+
+      \vspace{0.4em}
+      {\footnotesize 2D permite el manifold y la visualizacion directa;
+       mas dims pueden mejorar la reconstruccion a costa de perder
+       interpretabilidad.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Estudio 1 --- muestras por dim latente}
+  \centering
+  {\scriptsize\color{gray} Varia: dim latente $\in\{2,8,16\}$ (resto fijo: ver parametros). Seed representativa.}
+  \includegraphics[height=0.74\textheight]{exp_latent_dim_samples.png}
+  \vfill
+  {\footnotesize Muestras $z\!\sim\!\mathcal{N}(0,I)$ decodificadas. Mayor dim $\Rightarrow$ emojis mas definidos.}
+\end{frame}
+
+\begin{frame}{Estudio 1 --- reconstruccion por dim latente}
+  \centering
+  {\scriptsize\color{gray} Varia: dim latente $\in\{2,8,16\}$ (resto fijo: ver parametros). 5 seeds [0,1,2,3,42].}
+  \includegraphics[width=0.62\linewidth]{exp_latent_dim_bars.png}
+  \vfill
+  {\footnotesize \textbf{8D} es el mejor (MSE$=1{.}61\pm0{.}02$);
+   \textbf{2D} sacrifica reconstruccion (MSE$=5{.}05\pm0{.}12$);
+   16D no mejora sobre 8D. Elegimos \textbf{2D} para el manifold y la visualizacion directa.}
+\end{frame}
+
+\begin{frame}{Estudio 2 --- efecto de $\beta$: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos         & emojis $16\!\times\!16$ (960) \\
+          Arquitectura  & encoder/decoder, latente 2D \\
+          Activaciones  & ReLU / logistica / identidad \\
+          Loss / Opt    & BCE $+$ $\beta\cdot$KL / Adam $10^{-3}$ \\
+          Batch         & 64 \\
+          Epocas        & 400 \\
+          \textbf{Seeds}& \textbf{[0, 1, 2, 3, 42]} \\
+          Metrica       & scatter (seed rep.), rec, KL \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textit{Variable}: $\boldsymbol{\beta} \in \{0.1,\, 1.0,\, 4.0\}$.
+
+      \vspace{0.6em}
+      \textbf{Pregunta}: ¿que $\beta$ organiza el latente sin sacrificar
+      reconstruccion?
+
+      \vspace{0.4em}
+      {\footnotesize $\beta$ bajo $\Rightarrow$ latente libre, mala generacion.
+       $\beta$ alto $\Rightarrow$ clusters colapsados, rec peor.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Estudio 2 --- espacio latente por $\beta$}
+  \centering
+  {\scriptsize\color{gray} Varia: $\beta\in\{0{.}1,1{.}0,4{.}0\}$ (resto fijo: ver parametros). Seed representativa.}
+  \includegraphics[width=0.96\linewidth]{exp_beta_scatter.png}
+  \vfill
+  {\footnotesize $\beta$ bajo: clusters dispersos. $\beta$ alto: colapsados al origen.
+   \textbf{$\beta=1{.}0$}: estructura clara y separada.}
+\end{frame}
+
+\begin{frame}{Estudio 2 --- tradeoff rec/KL por $\beta$}
+  \centering
+  {\scriptsize\color{gray} Varia: $\beta\in\{0{.}1,1{.}0,4{.}0\}$ (resto fijo: ver parametros). 5 seeds [0,1,2,3,42].}
+  \includegraphics[width=0.80\linewidth]{exp_beta_bars.png}
+  \vfill
+  {\footnotesize $\beta=0{.}1$: mejor rec pero KL alto (latente libre).
+   $\beta=4{.}0$: rec deteriorada (KL$=3{.}35$, clusters colapsados).
+   \textbf{$\beta=1{.}0$}: equilibrio elegido (rec$=113{.}5$, KL$=5{.}61$).}
+\end{frame}
+
+\begin{frame}{Estudio 3 --- estabilidad entre seeds: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos         & emojis $16\!\times\!16$ (960) \\
+          Arquitectura  & encoder/decoder, latente 2D \\
+          Activaciones  & ReLU / logistica / identidad \\
+          Loss / Opt    & BCE $+$ KL / Adam $10^{-3}$ \\
+          $\beta$ / Batch & 1.0 / 64 \\
+          Epocas        & 600 \\
+          \textbf{Seeds}& \textbf{[42, 7, 123]} \\
+          Metrica       & curvas total / rec / KL \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textit{Variable}: \textbf{seed de inicializacion}.
+
+      \vspace{0.6em}
+      \textbf{Pregunta}: ¿el entrenamiento es estable entre distintas
+      inicializaciones?
+
+      \vspace{0.4em}
+      {\footnotesize El VAE es doblemente estocastico: init aleatoria
+       \textbf{y} sampleo $\varepsilon\!\sim\!\mathcal{N}(0,I)$ en cada
+       paso. 3 seeds, media $\pm$ std.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Estudio 3 --- estabilidad entre seeds}
+  \centering
+  {\scriptsize\color{gray} Varia: seed $\in\{42,7,123\}$ (resto fijo: ver parametros). 3 corridas.}
+  \includegraphics[width=0.92\linewidth]{exp_seeds.png}
+  \vfill
+  {\footnotesize Las 3 seeds convergen a valores muy similares
+   (rec$\approx$112, KL$\approx$5.8 al ep.\,600).
+   \textbf{El entrenamiento es estable} pese a la doble estocasticidad.}
+\end{frame}
+
+\begin{frame}{Estudio 4 --- KL warmup: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos         & emojis $16\!\times\!16$ (960) \\
+          Arquitectura  & encoder/decoder, latente 2D \\
+          Loss / Opt    & BCE $+$ KL / Adam $10^{-3}$ \\
+          $\beta$ final / Batch & 1.0 / 64 \\
+          Epocas        & 400 \\
+          \textbf{Seeds}& \textbf{[0, 1, 2, 3, 42]} \\
+          Metrica       & curvas rec y KL por epoca \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textit{Variable}: \textbf{warmup} $\in \{0,\, 100\}$ epocas.
+
+      \vspace{0.4em}
+      Con warmup, $\beta$ sube \emph{linealmente} de $0$ a $1$ en las
+      primeras $N$ epocas; sin warmup, $\beta=1$ desde el inicio.
+
+      \vspace{0.4em}
+      \textbf{Pregunta}: ¿el annealing del KL estabiliza el entrenamiento
+      y mejora la convergencia?
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Estudio 4 --- efecto del KL warmup}
+  \centering
+  {\scriptsize\color{gray} Varia: warmup $\in\{0,100\}$ epocas (resto fijo: ver parametros). 5 seeds [0,1,2,3,42].}
+  \includegraphics[width=0.88\linewidth]{exp_kl_warmup.png}
+  \vfill
+  {\footnotesize Ambas convergen practicamente igual
+   (rec$\approx113{.}4$--$113{.}5$, KL$\approx5{.}61$--$5{.}64$).
+   \textbf{Warmup no es determinante} $\Rightarrow$ usamos $\beta=1$ desde ep.\,0.}
+\end{frame}
+
+\begin{frame}{Conclusiones EJ2}
+  \begin{itemize}\setlength\itemsep{6pt}
+    \item El VAE impone $p(z)=\mathcal{N}(0,I)$ via KL $\Rightarrow$ latente
+          \textbf{continuo y organizado}: clusters por clase, interpolacion suave.
+    \item \textbf{Manifold 2D}: todo punto del latente genera un emoji valido;
+          la grilla $15\!\times\!15$ lo confirma visualmente.
+    \item \textbf{Generacion real} (consigna 2.c $\checkmark$): $z\!\sim\!\mathcal{N}(0,I)$
+          decodificado produce imagenes reconocibles del dataset.
+    \item \textbf{2D} equilibra visualizacion y calidad; $>$2D mejora rec sin beneficio visible.
+    \item \textbf{$\beta=1.0$}: sweet spot rec/KL; KL warmup no es determinante en este caso.
   \end{itemize}
 \end{frame}
 
