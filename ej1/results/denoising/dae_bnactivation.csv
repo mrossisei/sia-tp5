@@ -1,0 +1,3 @@
+activacion_cuello,exactas_limpio_media/32,exactas_limpio_std,eval_0.00_media,eval_0.00_std,eval_0.05_media,eval_0.05_std,eval_0.10_media,eval_0.10_std,eval_0.20_media,eval_0.20_std,eval_0.30_media,eval_0.30_std,eval_0.40_media,eval_0.40_std
+identity,32.00,0.00,0.0000,0.0000,0.0250,0.0094,0.2884,0.0177,2.5644,0.0761,6.7366,0.1640,11.4281,0.1405
+tanh,32.00,0.00,0.0000,0.0000,0.0269,0.0047,0.3056,0.0343,2.5919,0.0999,6.8519,0.2088,11.7525,0.5288

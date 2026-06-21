@@ -23,7 +23,7 @@ denoising:
   architecture: [35, 60, 40, 20, 8, 20, 40, 60, 35]
   hidden_activation: "tanh"
   output_activation: "logistic"
-  bottleneck_activation: "tanh"
+  bottleneck_activation: "identity"  # latente lineal (igual que el AE basico de 1a)
   bottleneck_size: 8
   loss: "bce"
   optimizer: "adam"

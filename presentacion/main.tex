@@ -18,7 +18,7 @@
 \usepackage{booktabs}
 \usepackage{xcolor}
 
-\graphicspath{{../ej1/results/basic/}}
+\graphicspath{{../ej1/results/basic/}{../ej1/results/denoising/}}
 
 \definecolor{accent}{HTML}{0F4C81}
 \setbeamercolor{frametitle}{bg=accent}
@@ -392,19 +392,216 @@
 \end{frame}
 
 % ============================================================
+% DENOISING AUTOENCODER (EJ1.b)
+% ============================================================
+
+\section{Denoising Autoencoder}
+
+\begin{frame}{Planteo del DAE --- setup y ruido}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos        & \texttt{font.h} ($32\times35$) \\
+          Tarea        & entrada ruidosa $\to$ target limpio \\
+          Augmentation & online (ruido nuevo cada epoca) \\
+          Arquitectura & $[35,60,40,20,8,20,40,60,35]$ \\
+          Activaciones & tanh (oculta), logistica (salida) \\
+                       & cuello \emph{lineal} (identidad) \\
+          Loss / Opt   & BCE / Adam $10^{-3}$ \\
+          Epocas / Batch / Init & 12000 / full-batch / Xavier \\
+          Ruido train  & salt\&pepper $p=0.10$ \\
+          \textbf{Seeds} & \textbf{[0, 1, 2, 3, 42]} \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textbf{Modelos de ruido} (barrido de evaluacion):
+      \begin{itemize}
+        \item \textbf{salt\&pepper}: invierte cada pixel con prob. $p$.
+        \item \textbf{gaussian}: $x + \mathcal{N}(0,\sigma^2)$, clip a $[0,1]$.
+        \item \textbf{masking}: pone a 0 una fraccion de pixeles.
+      \end{itemize}
+      \vspace{0.3em}
+      {\footnotesize Se entrena solo con salt\&pepper; gaussian y masking
+       miden \emph{generalizacion} a ruido no visto.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Estudio 1 --- ¿Que cuello? 2D vs 4D vs 8D}
+  \centering
+  {\scriptsize\color{gray} Varia: tamano del cuello (resto fijo: ver planteo).
+   5 seeds [0,1,2,3,42].}
+  \includegraphics[width=0.72\linewidth]{dae_bottleneck_curves.png}
+  \vfill
+  {\footnotesize \textbf{2D queda corto} (31.8/32 limpio); \textbf{4D} satura y
+   \textbf{8D} es mejor por poco. Barras $=$ std de 5 seeds.}
+\end{frame}
+
+\begin{frame}{Estudio 2 --- nivel de ruido en train: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos         & \texttt{font.h} ($32\times35$) \\
+          Config base   & DAE \textbf{cuello 8D} (Estudio 1), \\
+                        & lineal, tanh, BCE, Adam $10^{-3}$ \\
+          Entrenamiento & salt\&pepper online, target limpio \\
+          Batch / Init  & full-batch (32) / Xavier \\
+          Epocas        & 12000 \\
+          \textbf{Seeds}& \textbf{[0, 1, 2, 3, 42]} \\
+          Metrica       & pixel-error medio (32 letras \\
+                        & $\times$ 20 realizaciones) \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textit{Variable}: \textbf{nivel de ruido en train}
+      $p \in \{0.05, 0.10, 0.20, 0.30\}$ (un DAE por nivel).
+
+      \vspace{0.6em}
+      \textbf{Pregunta}: ¿cuanto ruido conviene en train para generalizar a
+      distintos niveles?
+
+      \vspace{0.4em}
+      {\footnotesize Eval: barriendo el ruido $0\to0.40$; \textbf{media $\pm$ std}
+       sobre las 5 seeds.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Estudio 2 --- ¿Cuanto ruido conviene en train?}
+  \centering
+  \includegraphics[width=0.78\linewidth]{exp_train_levels_heatmap.png}
+  \vfill
+  {\footnotesize \textbf{Sweet spot $p\approx0.10$--$0.20$}: $p=0.05$ generaliza
+   mal a ruido fuerte; $p=0.30$ ya degrada el limpio.}
+\end{frame}
+
+\begin{frame}{Estudio 3 --- activacion del cuello: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos         & \texttt{font.h} ($32\times35$) \\
+          Config base   & DAE \textbf{cuello 8D} (Estudios 1--2), \\
+                        & tanh oculta, BCE, Adam $10^{-3}$ \\
+          Entrenamiento & salt\&pepper online $p{=}0.10$, \\
+                        & target limpio \\
+          Batch / Init  & full-batch (32) / Xavier \\
+          Epocas        & 12000 \\
+          \textbf{Seeds}& \textbf{[0, 1, 2, 3, 42]} \\
+          Metrica       & pixel-error medio (32 letras \\
+                        & $\times$ 20 realizaciones) \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textit{Variable}: \textbf{activacion del cuello}
+      $\in \{$identidad, tanh$\}$.
+
+      \vspace{0.6em}
+      \textbf{Pregunta}: ¿la activacion del latente cambia el denoising?
+      (en 1a el cuello era lineal).
+
+      \vspace{0.4em}
+      {\footnotesize Eval: barriendo el ruido $0\to0.40$; \textbf{media $\pm$ std}
+       sobre las 5 seeds.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Estudio 3 --- ¿Importa la activacion del cuello?}
+  \centering
+  {\scriptsize\color{gray} Varia: activacion del cuello, identidad vs tanh
+   (resto fijo: ver parametros). 5 seeds.}
+  \includegraphics[width=0.72\linewidth]{dae_bnactivation_curves.png}
+  \vfill
+  {\footnotesize \textbf{Empate}: ambas reconstruyen el limpio (32/32) y dan el
+   mismo denoising dentro del std. Identidad es igual o levemente mejor y mas
+   estable $\Rightarrow$ \textbf{usamos identidad} (coherente con 1a).}
+\end{frame}
+
+\begin{frame}{Capacidad de denoising (cualitativo)}
+  \centering
+  {\scriptsize\color{gray} DAE final: cuello 8D, entrenado con salt\&pepper $p=0.10$.}
+  \includegraphics[width=0.75\linewidth]{noise_examples.png}
+  \vfill
+  {\footnotesize Limpia bien hasta $p\approx0.2$--$0.3$ (\texttt{err=0});
+   a ruido fuerte empieza a fallar en letras densas.}
+\end{frame}
+
+\begin{frame}{Robustez --- DAE vs AE basico: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos        & \texttt{font.h} ($32\times35$) \\
+          DAE          & cuello \textbf{8D} lineal, train \\
+                       & salt\&pepper $p=0.10$ (online) \\
+          AE basico    & cuello \textbf{2D} lineal, \\
+                       & \emph{sin} ruido (input=target) \\
+          Loss / Opt   & BCE / Adam $10^{-3}$ \\
+          Epocas       & DAE 12000 / basico 30000 \\
+          \textbf{Seeds}& \textbf{[0, 1, 2, 3, 42]} \\
+          Metrica      & pixel-error medio (32 letras \\
+                       & $\times$ 20 realizaciones) \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textit{Comparacion}: \textbf{3 tipos de ruido} (salt\&pepper, gaussian,
+      masking), barriendo el nivel $0\to0.40$.
+
+      \vspace{0.6em}
+      \textbf{Pregunta}: ¿el denoising es un efecto \emph{aprendido}?
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Robustez al ruido: DAE vs AE basico}
+  \centering
+  \includegraphics[width=0.96\linewidth]{dae_robustness_sweep.png}
+  \vfill
+  {\footnotesize El DAE queda \textbf{muy por debajo} en error en los 3 ruidos,
+   incluso en \emph{gaussian} y \emph{masking} que \textbf{no vio en train}.}
+\end{frame}
+
+% ============================================================
 % CONCLUSIONES
 % ============================================================
 
 \section{Conclusiones}
 
-\begin{frame}{Conclusiones --- EJ1.a}
-  \begin{itemize}
-    \item El AE \textbf{no lineal} con cuello \textbf{2D} memoriza las 32 letras
-          con \textbf{0 pixeles de error} (32/32 exactas), muy por encima del
-          baseline PCA 2D (27\% de varianza).
-    \item \textbf{Receta ganadora}: BCE + tanh + Adam. Adam es robusto al lr.
-    \item \textbf{Limite}: el AE memoriza pero su latente \textbf{no es generativo}
-          (muestreo aleatorio $\to$ 75\% colapsa). $\Rightarrow$ camino al VAE.
+\begin{frame}{Conclusiones}
+  \begin{itemize}\setlength\itemsep{6pt}
+    \item Un AE no lineal con cuello \textbf{2D} memoriza las 32 letras con \textbf{0 píxeles de error},
+          muy por encima del baseline PCA 2D.
+    \item \textbf{Receta robusta}: BCE + tanh + Adam funciona bien y es insensible al lr.
+    \item El \textbf{DAE} limpia salt\&pepper hasta $p\approx0.2$--$0.3$ y generaliza a ruidos
+          no vistos en train (gaussian, masking).
+    \item Cuello \textbf{8D lineal} es óptimo para denoising; el nivel de ruido de train tiene
+          un sweet spot en $p\approx0.10$--$0.20$.
+    \item \textbf{Límite del AE}: el espacio latente \textbf{no tiene estructura}; muestrear
+          puntos arbitrarios no genera letras válidas. $\Rightarrow$ necesitamos un espacio
+          latente organizado.
   \end{itemize}
 \end{frame}
 
