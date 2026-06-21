@@ -359,11 +359,6 @@
         \item Mismo cuello 2D que el PCA, pero aca reconstruye \textbf{perfecto}
               (vs 27\% de varianza del PCA lineal).
       \end{itemize}
-      \vspace{0.4em}
-      \begin{block}{Lectura}
-        La no linealidad del encoder/decoder es lo que permite "doblar" el espacio
-        y separar lo que el PCA no podia.
-      \end{block}
     \end{column}
   \end{columns}
 \end{frame}
@@ -372,10 +367,6 @@
   \centering
   \includegraphics[width=0.98\linewidth]{new_letter_generation.png}
   \vfill
-  {\footnotesize Recorremos una recta en el latente entre ``\texttt{`}'' y
-   \texttt{'p'} y decodificamos. El punto medio produce una letra a \textbf{+5
-   pixeles} de la mas cercana (\texttt{'e'}): \textbf{no pertenece} al set de
-   entrenamiento. El decoder \emph{mezcla} rasgos de los vecinos latentes.}
 \end{frame}
 
 \begin{frame}{El latente del AE no es generativo}
@@ -388,15 +379,14 @@
       \begin{itemize}
         \item Muestreamos 500 puntos $z$ \emph{al azar} en el rango del latente
               y decodificamos.
-        \item \textbf{75\%} colapsa a una letra existente; solo \textbf{24\%} son
+        \item \textbf{75\%} colapsa a una letra existente; \textbf{24\%} son
               "nuevas plausibles".
-        \item No hay un \emph{prior}: el latente del AE tiene regiones sin
-              estructura.
+        \item El \textbf{1\%} restante es un patron \emph{sin estructura}, que no
+              podria considerarse una nueva letra:
       \end{itemize}
-      \vspace{0.3em}
-      \begin{alertblock}{Motiva el VAE (EJ2)}
-        Un latente \emph{continuo y muestreable} con prior gaussiano.
-      \end{alertblock}
+      \vspace{0.2em}
+      \centering
+      \includegraphics[height=0.30\textheight]{random_latent_sampling_noise_example.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -412,12 +402,7 @@
     \item El AE \textbf{no lineal} con cuello \textbf{2D} memoriza las 32 letras
           con \textbf{0 pixeles de error} (32/32 exactas), muy por encima del
           baseline PCA 2D (27\% de varianza).
-    \item \textbf{Receta ganadora}: BCE + tanh + Adam. Adam es robusto al lr; la
-          \emph{logistica} oculta y \emph{MSE} son los unicos ingredientes que
-          fallan el objetivo.
-    \item \textbf{Rigor}: la grilla 30000 ep $\times$ 5 seeds separa los fracasos
-          \emph{reales} de la censura por presupuesto, y confirma que las
-          conclusiones \textbf{no son suerte} de una seed.
+    \item \textbf{Receta ganadora}: BCE + tanh + Adam. Adam es robusto al lr.
     \item \textbf{Limite}: el AE memoriza pero su latente \textbf{no es generativo}
           (muestreo aleatorio $\to$ 75\% colapsa). $\Rightarrow$ camino al VAE.
   \end{itemize}

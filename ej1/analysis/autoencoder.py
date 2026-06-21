@@ -10,6 +10,8 @@ Genera (en ej1/results/basic/):
   - random_latent_sampling.png: muestreo z random -> decoder (1.a.4, "es generativo?")
 """
 
+import os
+
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -199,8 +201,14 @@ def plot_new_letter_generation(ae, X, labels, path, char_a="`", char_b="p",
     gen = (ae.decode(codes) >= 0.5).astype(int)
     mid_idx = n_steps // 2
 
-    fig = plt.figure(figsize=(n_steps * 1.3, 3.4))
-    gs = fig.add_gridspec(2, n_steps, height_ratios=[3, 1])
+    zmid = codes[mid_idx]
+    # Segunda letra nueva: el primer paso despues del extremo 'char_a'.
+    sec_idx = 1
+    zsec = codes[sec_idx]
+    dsec, near_sec = nearest(gen[sec_idx])
+
+    fig = plt.figure(figsize=(n_steps * 1.3, 6.2))
+    gs = fig.add_gridspec(2, n_steps, height_ratios=[1.4, 2.6])
     for j in range(n_steps):
         ax = fig.add_subplot(gs[0, j])
         ax.imshow(gen[j].reshape(ROWS, COLS), cmap="Greys", vmin=0, vmax=1)
@@ -209,6 +217,13 @@ def plot_new_letter_generation(ae, X, labels, path, char_a="`", char_b="p",
             ax.set_title(f"'{char_a}'", fontsize=10)
         elif j == n_steps - 1:
             ax.set_title(f"'{char_b}'", fontsize=10)
+        elif j == sec_idx:
+            if dsec > 0:
+                ax.set_title(f"nueva\n(+{dsec}px vs '{near_sec}')",
+                             fontsize=9, color=PALETTE["positive"])
+            else:
+                ax.set_title(f"= '{near_sec}'", fontsize=9,
+                             color=PALETTE["negative"])
         elif j == mid_idx:
             if dmid > 0:
                 ax.set_title(f"nueva\n(+{dmid}px vs '{near_mid}')",
@@ -216,15 +231,41 @@ def plot_new_letter_generation(ae, X, labels, path, char_a="`", char_b="p",
             else:
                 ax.set_title(f"= '{near_mid}'", fontsize=9,
                              color=PALETTE["negative"])
-    # Recta en el latente
+    # Recta en el latente, con las 32 letras anotadas y las coordenadas (z1,z2)
+    # de los extremos y del punto medio (la letra nueva).
     ax_l = fig.add_subplot(gs[1, :])
-    ax_l.scatter(Z[:, 0], Z[:, 1], c="lightgray", s=20, zorder=1)
+    ax_l.scatter(Z[:, 0], Z[:, 1], c="lightgray", s=120, alpha=0.5, zorder=1)
+    for i, lab in enumerate(labels):
+        ax_l.annotate(lab, (Z[i, 0], Z[i, 1]), fontsize=9, ha="center",
+                      va="center", color="dimgray", zorder=2)
     ax_l.plot(codes[:, 0], codes[:, 1], "-o", color=PALETTE["highlight"],
-              ms=4, zorder=2)
-    ax_l.scatter([za[0], zb[0]], [za[1], zb[1]], c=PALETTE["primary"], s=50,
-                 zorder=3)
-    ax_l.set_title("Recta de interpolacion en el espacio latente", fontsize=9)
-    ax_l.set_xticks([]); ax_l.set_yticks([])
+              ms=5, zorder=3)
+    ax_l.scatter([za[0], zb[0]], [za[1], zb[1]], c=PALETTE["primary"], s=90,
+                 zorder=4)
+    ax_l.scatter([zmid[0]], [zmid[1]], c=PALETTE["highlight"], s=140,
+                 edgecolors="k", linewidths=1.2, zorder=5)
+    ax_l.scatter([zsec[0]], [zsec[1]], c=PALETTE["positive"], s=140,
+                 edgecolors="k", linewidths=1.2, zorder=5)
+    # Anotacion de coordenadas: extremos y las dos letras nuevas resaltadas
+    ax_l.annotate(f"'{char_a}'  z=({za[0]:.1f}, {za[1]:.1f})", (za[0], za[1]),
+                  textcoords="offset points", xytext=(-8, -16), ha="right",
+                  fontsize=8, color=PALETTE["primary"], fontweight="bold",
+                  zorder=6)
+    ax_l.annotate(f"'{char_b}'  z=({zb[0]:.1f}, {zb[1]:.1f})", (zb[0], zb[1]),
+                  textcoords="offset points", xytext=(8, 8), fontsize=8,
+                  color=PALETTE["primary"], fontweight="bold", zorder=6)
+    ax_l.annotate(f"nueva  z=({zsec[0]:.1f}, {zsec[1]:.1f})", (zsec[0], zsec[1]),
+                  textcoords="offset points", xytext=(0, 22), ha="center",
+                  fontsize=8.5, color=PALETTE["positive"], fontweight="bold",
+                  zorder=6)
+    ax_l.annotate(f"nueva  z=({zmid[0]:.1f}, {zmid[1]:.1f})", (zmid[0], zmid[1]),
+                  textcoords="offset points", xytext=(8, -14), fontsize=8.5,
+                  color=PALETTE["highlight"], fontweight="bold", zorder=6)
+    ax_l.set_title("Recta de interpolacion en el espacio latente "
+                   "(las 32 letras en gris)", fontsize=9)
+    ax_l.set_xlabel("z1", fontsize=9)
+    ax_l.set_ylabel("z2", fontsize=9)
+    ax_l.grid(True, alpha=0.3)
     novel = (f"punto medio a {dmid}px de la letra mas cercana ('{near_mid}') "
              f"-> no pertenece al set" if dmid > 0
              else f"punto medio = '{near_mid}' (no es nuevo)")
@@ -291,17 +332,29 @@ def plot_random_latent_sampling(ae, X, labels, path, n_show=24, n_stats=500,
         if collapse[k]:
             ax.set_title(f"= '{near}'", fontsize=8, color=PALETTE["negative"])
         elif degen[k]:
-            ax.set_title("basura", fontsize=8, color="gray")
+            ax.set_title("sin estructura", fontsize=8, color="gray")
         else:
             ax.set_title(f"nueva +{d}px", fontsize=8, color=PALETTE["positive"])
     fig.suptitle(
         f"AE: {n_stats} z random uniformes en el rango del latente -> decoder\n"
         f"colapsan a una letra existente: {pct_c:.0f}%   |   "
-        f"basura: {pct_d:.0f}%   |   nuevas plausibles: {pct_n:.0f}%   "
+        f"sin estructura: {pct_d:.0f}%   |   nuevas plausibles: {pct_n:.0f}%   "
         f"(el latente del AE no es generativo)",
         fontsize=11, y=1.0)
     fig.tight_layout(rect=[0, 0, 1, 0.93])
     save_fig(fig, path)
+
+    # --- Ejemplo individual de un patron "sin estructura" (para la diapo) ---
+    degen_idx = np.where(degen)[0]
+    if degen_idx.size > 0:
+        k0 = int(degen_idx[0])
+        fig_ex, ax_ex = plt.subplots(figsize=(1.6, 2.0))
+        ax_ex.imshow(pats[k0].reshape(ROWS, COLS), cmap="Greys", vmin=0, vmax=1)
+        ax_ex.set_xticks([]); ax_ex.set_yticks([])
+        ax_ex.set_title("sin estructura", fontsize=9, color="gray")
+        base, ext = os.path.splitext(path)
+        save_fig(fig_ex, base + "_noise_example" + ext)
+
     return {"pct_collapse": pct_c, "pct_garbage": pct_d, "pct_novel": pct_n,
             "n_stats": n_stats}
 
