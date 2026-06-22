@@ -666,7 +666,7 @@
 
 \begin{frame}{El latente se organiza}
   \centering
-  \includegraphics[width=0.70\linewidth]{../ej2/results/long_16px/latent_scatter.png}
+  \includegraphics[width=0.54\linewidth]{../ej2/results/long_16px/latent_scatter.png}
   \vfill
   {\footnotesize Cada punto es $\mu(x)$. El KL forzo el latente hacia
    $\mathcal{N}(0,I)$: clusters por clase cerca del origen,
@@ -683,11 +683,10 @@
 
 \begin{frame}{Manifold generativo}
   \centering
-  \includegraphics[height=0.72\textheight]{manifold_grid.png}
+  \includegraphics[height=0.74\textheight]{manifold_grid.png}
   \vfill
-  {\footnotesize Grilla $15\!\times\!15$ en el latente decodificada (percentiles del
-   prior $\mathcal{N}(0,I)$). \textbf{Todo punto produce un emoji valido}:
-   el espacio latente es continuo.}
+  {\footnotesize El decoder genera emojis plausibles en distintas regiones del plano, mostrando un
+   \textbf{manifold continuo}: puntos cercanos producen imágenes parecidas.}
 \end{frame}
 
 \begin{frame}{Generacion: nuevas muestras}
@@ -695,15 +694,15 @@
   \includegraphics[height=0.72\textheight]{samples.png}
   \vfill
   {\footnotesize $z\sim\mathcal{N}(0,I)$ decodificados: el VAE genera imagenes
-   \textbf{nuevas y reconocibles} del dataset (consigna 2.c $\checkmark$).}
+   \textbf{nuevas y reconocibles} del dataset.}
 \end{frame}
 
 \begin{frame}{Interpolacion en el latente}
   \centering
-  \includegraphics[width=0.92\linewidth]{interpolation.png}
+  \includegraphics[width=0.90\linewidth]{interpolation_feliz_corazon_latent8.png}
   \vfill
-  {\footnotesize Recta entre los centroides $\mu$ de dos clases: la transicion
-   es \textbf{suave y continua} gracias al latente organizado.}
+  {\footnotesize Interpolacion fija entre \texttt{cara\_feliz} y \texttt{corazon}:
+   la transicion se vuelve mas visible entre clases visualmente distintas.}
 \end{frame}
 
 % ------------ Experimentos VAE --------------------------------
@@ -814,52 +813,7 @@
    \textbf{$\beta=1{.}0$}: equilibrio elegido (rec$=113{.}5$, KL$=5{.}61$).}
 \end{frame}
 
-\begin{frame}{Estudio 3 --- estabilidad entre seeds: parametros}
-  \begin{columns}[T]
-    \begin{column}{0.55\textwidth}
-      \begin{table}\small
-        \begin{tabular}{ll}
-          \toprule
-          Parametro & Valor \\
-          \midrule
-          Datos         & emojis $16\!\times\!16$ (960) \\
-          Arquitectura  & encoder/decoder, latente 2D \\
-          Activaciones  & ReLU / logistica / identidad \\
-          Loss / Opt    & BCE $+$ KL / Adam $10^{-3}$ \\
-          $\beta$ / Batch & 1.0 / 64 \\
-          Epocas        & 600 \\
-          \textbf{Seeds}& \textbf{[42, 7, 123]} \\
-          Metrica       & curvas total / rec / KL \\
-          \bottomrule
-        \end{tabular}
-      \end{table}
-    \end{column}
-    \begin{column}{0.44\textwidth}
-      \textit{Variable}: \textbf{seed de inicializacion}.
-
-      \vspace{0.6em}
-      \textbf{Pregunta}: ¿el entrenamiento es estable entre distintas
-      inicializaciones?
-
-      \vspace{0.4em}
-      {\footnotesize El VAE es doblemente estocastico: init aleatoria
-       \textbf{y} sampleo $\varepsilon\!\sim\!\mathcal{N}(0,I)$ en cada
-       paso. 3 seeds, media $\pm$ std.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Estudio 3 --- estabilidad entre seeds}
-  \centering
-  {\scriptsize\color{gray} Varia: seed $\in\{42,7,123\}$ (resto fijo: ver parametros). 3 corridas.}
-  \includegraphics[width=0.92\linewidth]{exp_seeds.png}
-  \vfill
-  {\footnotesize Las 3 seeds convergen a valores muy similares
-   (rec$\approx$112, KL$\approx$5.8 al ep.\,600).
-   \textbf{El entrenamiento es estable} pese a la doble estocasticidad.}
-\end{frame}
-
-\begin{frame}{Estudio 4 --- KL warmup: parametros}
+\begin{frame}{Estudio 3 --- KL warmup: parametros}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{table}\small
@@ -892,7 +846,7 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Estudio 4 --- efecto del KL warmup}
+\begin{frame}{Estudio 3 --- efecto del KL warmup}
   \centering
   {\scriptsize\color{gray} Varia: warmup $\in\{0,100\}$ epocas (resto fijo: ver parametros). 5 seeds [0,1,2,3,42].}
   \includegraphics[width=0.88\linewidth]{exp_kl_warmup.png}
@@ -908,7 +862,7 @@
           \textbf{continuo y organizado}: clusters por clase, interpolacion suave.
     \item \textbf{Manifold 2D}: todo punto del latente genera un emoji valido;
           la grilla $15\!\times\!15$ lo confirma visualmente.
-    \item \textbf{Generacion real} (consigna 2.c $\checkmark$): $z\!\sim\!\mathcal{N}(0,I)$
+    \item \textbf{Generacion real}: $z\!\sim\!\mathcal{N}(0,I)$
           decodificado produce imagenes reconocibles del dataset.
     \item \textbf{2D} equilibra visualizacion y calidad; $>$2D mejora rec sin beneficio visible.
     \item \textbf{$\beta=1.0$}: sweet spot rec/KL; KL warmup no es determinante en este caso.
