@@ -1,0 +1,10 @@
+arquitectura,cuello,err_medio,err_std,exactas_limpio
+poco profunda,2,2.6103,0.1829,16.00
+poco profunda,4,1.3406,0.0811,27.00
+poco profunda,8,0.7800,0.0194,31.40
+media,2,0.9938,0.0905,29.20
+media,4,0.5453,0.0928,31.80
+media,8,0.3775,0.0107,32.00
+profunda ancha,2,0.4272,0.0585,31.80
+profunda ancha,4,0.3300,0.0489,32.00
+profunda ancha,8,0.2356,0.0274,32.00

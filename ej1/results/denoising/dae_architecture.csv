@@ -1,0 +1,4 @@
+arquitectura,err_medio_media,err_medio_std,conv_epoch_media,conv_epoch_std,n_conv
+"poco profunda [35,20,8,20,35]",0.7800,0.0194,5220.0,240.0,5
+"media [35,30,15,8,15,30,35]",0.3775,0.0107,2280.0,147.0,5
+"profunda-ancha [35,60,40,20,8,...]",0.2356,0.0274,960.0,120.0,5

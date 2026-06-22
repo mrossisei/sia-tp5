@@ -434,14 +434,50 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Estudio 1 --- ¿Que cuello? 2D vs 4D vs 8D}
+\begin{frame}{Estudio 1 --- arquitectura $\times$ cuello: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos         & \texttt{font.h} ($32\times35$) \\
+          Entrenamiento & salt\&pepper online $p{=}0.10$, \\
+                        & target limpio \\
+          Activaciones  & tanh (oculta), identidad (cuello) \\
+          Loss / Opt    & BCE / Adam $10^{-3}$ \\
+          Batch / Init  & full-batch (32) / Xavier \\
+          Epocas        & 12000 \\
+          \textbf{Seeds}& \textbf{[0, 1, 2, 3, 42]} \\
+          Metrica       & pixel-error medio a $p{=}0.10$ \\
+                        & + exactas/32 en limpio \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textit{Variables}: \textbf{arquitectura} $\times$ \textbf{cuello}.
+
+      \vspace{0.5em}
+      Arquitecturas (mismas que Eje 3 del AE):
+      \begin{itemize}\small
+        \item poco profunda $[35,20,k,20,35]$
+        \item media $[35,30,15,k,15,30,35]$
+        \item profunda-ancha $[35,60,40,20,k,\ldots]$
+      \end{itemize}
+      Cuello $k \in \{2, 4, 8\}$.
+
+      \vspace{0.4em}
+      \textbf{Pregunta}: ¿que combinacion minimiza el error de denoising
+      sin perder reconstruccion?
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Estudio 1 --- arquitectura $\times$ cuello: resultados}
   \centering
-  {\scriptsize\color{gray} Varia: tamano del cuello (resto fijo: ver planteo).
-   5 seeds [0,1,2,3,42].}
-  \includegraphics[width=0.72\linewidth]{dae_bottleneck_curves.png}
-  \vfill
-  {\footnotesize \textbf{2D queda corto} (31.8/32 limpio); \textbf{4D} satura y
-   \textbf{8D} es mejor por poco. Barras $=$ std de 5 seeds.}
+  \includegraphics[width=0.62\linewidth]{dae_arch_bottleneck_heatmap.png}
 \end{frame}
 
 \begin{frame}{Estudio 2 --- nivel de ruido en train: parametros}
@@ -453,8 +489,8 @@
           Parametro & Valor \\
           \midrule
           Datos         & \texttt{font.h} ($32\times35$) \\
-          Config base   & DAE \textbf{cuello 8D} (Estudio 1), \\
-                        & lineal, tanh, BCE, Adam $10^{-3}$ \\
+          Config base   & DAE profunda-ancha, \textbf{cuello 8D} \\
+                        & (Estudio 1), tanh, BCE, Adam $10^{-3}$ \\
           Entrenamiento & salt\&pepper online, target limpio \\
           Batch / Init  & full-batch (32) / Xavier \\
           Epocas        & 12000 \\
@@ -497,8 +533,8 @@
           Parametro & Valor \\
           \midrule
           Datos         & \texttt{font.h} ($32\times35$) \\
-          Config base   & DAE \textbf{cuello 8D} (Estudios 1--2), \\
-                        & tanh oculta, BCE, Adam $10^{-3}$ \\
+          Config base   & DAE profunda-ancha, \textbf{cuello 8D} \\
+                        & (Estudios 1--2), tanh, BCE, Adam $10^{-3}$ \\
           Entrenamiento & salt\&pepper online $p{=}0.10$, \\
                         & target limpio \\
           Batch / Init  & full-batch (32) / Xavier \\
