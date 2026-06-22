@@ -742,22 +742,22 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Estudio 1 --- muestras por dim latente}
-  \centering
-  {\scriptsize\color{gray} Varia: dim latente $\in\{2,8,16\}$ (resto fijo: ver parametros). Seed representativa.}
-  \includegraphics[height=0.74\textheight]{exp_latent_dim_samples.png}
-  \vfill
-  {\footnotesize Muestras $z\!\sim\!\mathcal{N}(0,I)$ decodificadas. Mayor dim $\Rightarrow$ emojis mas definidos.}
-\end{frame}
-
 \begin{frame}{Estudio 1 --- reconstruccion por dim latente}
   \centering
-  {\scriptsize\color{gray} Varia: dim latente $\in\{2,8,16\}$ (resto fijo: ver parametros). 5 seeds [0,1,2,3,42].}
-  \includegraphics[width=0.62\linewidth]{exp_latent_dim_bars.png}
+  {\scriptsize\color{gray} Varia: dim latente $\in\{2,8,16\}$ (resto fijo: seed=42).}
+  \includegraphics[height=0.78\textheight]{exp_latent_dim_reconstructions.png}
   \vfill
-  {\footnotesize \textbf{8D} es el mejor (MSE$=1{.}61\pm0{.}02$);
-   \textbf{2D} sacrifica reconstruccion (MSE$=5{.}05\pm0{.}12$);
-   16D no mejora sobre 8D. Elegimos \textbf{2D} para el manifold y la visualizacion directa.}
+  {\footnotesize Reconstrucci\'on con $z=\mu(x)$ (determin\'istico). Mayor dim $\Rightarrow$ m\'as detalle.}
+\end{frame}
+
+\begin{frame}{Estudio 1 --- MSE por dim latente}
+  \centering
+  {\scriptsize\color{gray} Varia: dim latente $\in\{2,8,16\}$ (resto fijo: 2 seeds [42,7], 1000 epoch).}
+  \includegraphics[width=0.62\linewidth]{exp_latent_dim_mse.png}
+  \vfill
+  {\footnotesize \textbf{8D} mejora claramente (MSE$=1{.}20\pm0{.}04$);
+   \textbf{2D} sacrifica detalle (MSE$=3{.}94\pm0{.}14$);
+   \textbf{16D} no mejora respecto de 8D. Elegimos \textbf{2D} para el manifold y visualizaci\'on directa.}
 \end{frame}
 
 \begin{frame}{Estudio 2 --- efecto de $\beta$: parametros}
