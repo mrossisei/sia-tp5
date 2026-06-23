@@ -19,7 +19,7 @@ from shared.plotting import save_fig, PALETTE
 from ej2.experiments._common import load_emojis, train_vae, img, RESULTS_DIR
 
 DIMS   = [2, 8, 16]
-SEEDS  = [42, 7]
+SEEDS  = [0, 1, 2, 3, 42]
 EPOCHS = 1000
 
 SHOW_CLASSES = [

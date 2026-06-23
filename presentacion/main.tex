@@ -788,11 +788,11 @@
 
 \begin{frame}{Estudio 1 --- MSE por dim latente}
   \centering
-  {\scriptsize\color{gray} Varia: dim latente $\in\{2,8,16\}$ (resto fijo: 2 seeds [42,7], 1000 epoch).}
+  {\scriptsize\color{gray} Varia: dim latente $\in\{2,8,16\}$ (resto fijo: 5 seeds [0,1,2,3,42], 1000 epoch).}
   \includegraphics[width=0.62\linewidth]{exp_latent_dim_mse.png}
   \vfill
-  {\footnotesize \textbf{8D} mejora claramente (MSE$=1{.}20\pm0{.}04$);
-   \textbf{2D} sacrifica detalle (MSE$=3{.}94\pm0{.}14$);
+  {\footnotesize \textbf{8D} mejora claramente;
+   \textbf{2D} sacrifica detalle;
    \textbf{16D} no mejora respecto de 8D. Elegimos \textbf{2D} para el manifold y visualizaci\'on directa.}
 \end{frame}
 
