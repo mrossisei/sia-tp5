@@ -790,11 +790,11 @@
           Parametro & Valor \\
           \midrule
           Datos         & emojis $16\!\times\!16$ (960) \\
-          Arquitectura  & $[256,64]/[64,256]$, latente 16D \\
+          Arquitectura  & $[256,64]/[64,256]$, \textbf{latente 2D} \\
           Salida        & logistica (pixeles en $(0,1)$) \\
-          Opt / Epocas  & Adam $10^{-3}$ / 400 \\
+          Opt / Epocas  & Adam $10^{-3}$ / 600 \\
           \textbf{Seeds}& \textbf{[42, 0, 1]} \\
-          Metrica       & rec-MSE (comun), nitidez, KL \\
+          Metrica       & rec-MSE (comun), KL, generacion \\
           \bottomrule
         \end{tabular}
       \end{table}
@@ -803,12 +803,13 @@
       \textit{Variable}: \textbf{recon\_loss} $\in \{$BCE, MSE$\}$.
 
       \vspace{0.4em}
-      \textbf{Pregunta}: ¿BCE reconstruye mejor que MSE en imagenes $[0,1]$?
+      \textbf{Pregunta}: ¿que loss conviene en \textbf{2D} (la corrida final),
+      mirando reconstruccion \emph{y generacion}?
 
       \vspace{0.3em}
-      {\footnotesize Latente \textbf{16D} (no 2D): a 2D el cuello aplasta todo y
-       ninguna se ve nitida; con mas capacidad la reconstruccion es legible y la
-       diferencia se aprecia.}
+      {\footnotesize Lo evaluamos en \textbf{2D} (no 16D): es la dim que usamos
+       de verdad, y nos importa la \emph{consecuencia generativa}, no solo el
+       detalle de reconstruccion.}
 
       \vspace{0.3em}
       {\footnotesize BCE $=$ verosimilitud Bernoulli del pixel: gradiente limpio
@@ -820,8 +821,14 @@
 
 \begin{frame}{Estudio 3 --- BCE vs MSE: resultados}
   \centering
-  {\scriptsize\color{gray} Varia: recon\_loss $\in\{$BCE, MSE$\}$ (resto fijo: ver parametros). 3 seeds [42,0,1].}
+  {\scriptsize\color{gray} Varia: recon\_loss $\in\{$BCE, MSE$\}$ en latente 2D (resto fijo: ver parametros). 3 seeds [42,0,1].}
   \includegraphics[width=0.86\linewidth]{exp_vae_reconloss.png}
+  \vfill
+  {\footnotesize En 2D, \textbf{MSE colapsa el latente} (KL $2{.}95$ vs $5{.}79$):
+   al ser el termino de reconstruccion mas chico, el KL pesa relativamente mas y
+   el encoder manda los codigos al centro $\Rightarrow$ menos info al decoder
+   $\Rightarrow$ generacion mas gris/lavada. \textbf{BCE} gana incluso medido en
+   MSE (rec-MSE \textbf{4.54 vs 6.49}). \textbf{Fijamos BCE} para la corrida final.}
 \end{frame}
 
 \begin{frame}{Estudio 4 --- capacidad de la arquitectura: parametros}
@@ -837,7 +844,8 @@
           Latente / Batch & 2D / 64 \\
           Epocas        & 400 \\
           \textbf{Seeds}& \textbf{[42, 0, 1]} \\
-          Metrica       & rec-MSE (comun) $+$ n params \\
+          Metrica       & rec-MSE, rec\_BCE, KL, \\
+                        & loss $=$ rec$+\beta$KL, n params \\
           \bottomrule
         \end{tabular}
       \end{table}
@@ -860,9 +868,13 @@
   {\scriptsize\color{gray} Varia: ancho/profundidad encoder/decoder (resto fijo: ver parametros). 3 seeds [42,0,1].}
   \includegraphics[width=0.96\linewidth]{exp_vae_arch.png}
   \vfill
-  {\footnotesize rec-MSE baja con la capacidad ($6{.}80\!\to\!5{.}12\!\to\!4{.}34$) con
-   \textbf{rendimientos decrecientes} (el cuello 2D limita). La \textbf{profunda} iguala
-   a la ancha ($4{.}34$ vs $4{.}37$) con $\sim$mitad de params $\Rightarrow$ profundidad mas eficiente.}
+  {\footnotesize Por \textbf{rec-MSE} la capacidad parece importar mucho
+   ($6{.}80\!\to\!5{.}12\!\to\!4{.}34$), con \textbf{rendimientos decrecientes};
+   la \textbf{profunda} iguala a la ancha ($4{.}34$ vs $4{.}37$) con $\sim$mitad de params.
+   Pero por la \textbf{loss completa} ($\text{rec}+\beta\text{KL}$) las 4 quedan
+   \textbf{casi iguales} ($122\!\to\!116$): al subir la capacidad mejora la rec pero
+   \textbf{sube el KL} ($4{.}9\!\to\!5{.}9$), que \emph{compensa} la ganancia. La
+   reconstruccion sola exagera el efecto; en el objetivo real la arquitectura casi no mueve la aguja.}
 \end{frame}
 
 \begin{frame}{Estudio 5 --- KL warmup: parametros}
@@ -1001,7 +1013,10 @@
           la grilla $15\!\times\!15$ lo confirma visualmente.
     \item \textbf{Generacion real}: $z\!\sim\!\mathcal{N}(0,I)$
           decodificado produce imagenes reconocibles del dataset.
-    \item \textbf{2D} equilibra visualizacion y calidad; $>$2D mejora rec sin beneficio visible.
+    \item \textbf{Dim latente $=$ trade-off}: para reconstruccion pura conviene
+          \textbf{8D} (la rec satura ahi: 16D ya no aporta), pero elegimos
+          \textbf{2D} a proposito --- es lo unico que permite graficar el
+          \emph{manifold} y el latente \emph{directamente}, asumiendo el costo en detalle.
     \item \textbf{$\beta=1.0$}: sweet spot rec/KL; KL warmup no es determinante en este caso.
   \end{itemize}
 \end{frame}
