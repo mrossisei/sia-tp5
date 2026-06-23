@@ -347,7 +347,7 @@ Además **generaliza a ruido no visto**: gaussiano (σ=0.1: 0.00 · σ=0.3: 0.02
   (más dimensiones → mucha mejor reconstrucción).
 - **beta** (400 ép, latente 2): β=0.1 rec=111.30 / KL=10.00 · β=1.0 rec=114.06 /
   KL=5.52 · β=4.0 rec=120.57 / KL=3.25 (trade-off rec/KL clásico del β-VAE).
-- **kl_warmup** (400 ép): sin warmup rec=114.06 / KL=5.52 · warmup=100 rec=113.64 /
+- **kl_warmup** (400 ép): sin warmup rec=114.06 / KL=5.52 · warmup=200 rec=113.24 /
   KL=5.58 (el warmup deja crecer el KL temprano y termina con reconstrucción algo mejor).
 
 ---

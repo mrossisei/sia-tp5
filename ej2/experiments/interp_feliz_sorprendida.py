@@ -34,14 +34,14 @@ from ej2.experiments._common import train_vae
 
 DATA_PATH = os.path.join(REPO_ROOT, "ej2", "data", "emojis.npz")
 RESULTS_DIR = os.path.join(REPO_ROOT, "ej2", "results")
-MODEL_PATH = os.path.join(RESULTS_DIR, "interp_latent8_model.npz")
+MODEL_PATH = os.path.join(RESULTS_DIR, "interp_latent8_seed1_model.npz")
 
 CLASS_A = 0
 CLASS_B = 8
 STEPS = 10
 LATENT_DIM = 8
 EPOCHS = 600
-SEED = 42
+SEED = 1
 
 
 def load_emojis():

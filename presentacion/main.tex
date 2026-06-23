@@ -990,7 +990,7 @@
       \end{table}
     \end{column}
     \begin{column}{0.44\textwidth}
-      \textit{Variable}: \textbf{warmup} $\in \{0,\, 100\}$ epocas.
+      \textit{Variable}: \textbf{warmup} $\in \{0,\, 200\}$ epocas.
 
       \vspace{0.4em}
       Con warmup, $\beta$ sube \emph{linealmente} de $0$ a $1$ en las
@@ -1005,7 +1005,7 @@
 
 \begin{frame}{Estudio 5 --- efecto del KL warmup}
   \centering
-  {\scriptsize\color{gray} Varia: warmup $\in\{0,100\}$ epocas (resto fijo: ver parametros). 5 seeds [0,1,2,3,42].}
+  {\scriptsize\color{gray} Varia: warmup $\in\{0,200\}$ epocas (resto fijo: ver parametros). 5 seeds [0,1,2,3,42].}
   \includegraphics[width=0.88\linewidth]{exp_kl_warmup.png}
   \vfill
   {\footnotesize Ambas convergen practicamente igual
@@ -1079,10 +1079,10 @@
 
 \begin{frame}{Generacion: nuevas muestras}
   \centering
-  \includegraphics[height=0.72\textheight]{samples.png}
+  \includegraphics[height=0.72\textheight]{generated_samples_latent16.png}
   \vfill
-  {\footnotesize Muestras con $z\sim\mathcal{N}(0,I)$: el VAE genera imagenes
-   \textbf{nuevas y plausibles} del dataset.}
+  {\footnotesize Imagenes nuevas generadas en el espacio latente \textbf{16D}:
+   combinan rasgos visuales del dataset sin copiar ejemplos de entrenamiento.}
 \end{frame}
 
 \begin{frame}{Interpolacion en el latente}
@@ -1095,17 +1095,13 @@
 
 \begin{frame}{Conclusiones EJ2}
   \begin{itemize}\setlength\itemsep{6pt}
-    \item El VAE impone $p(z)=\mathcal{N}(0,I)$ via KL $\Rightarrow$ latente
-          \textbf{continuo y organizado}: clusters por clase, interpolacion suave.
-    \item \textbf{Manifold 2D}: gran parte del latente genera emojis plausibles;
-          la grilla $15\!\times\!15$ lo confirma visualmente.
-    \item \textbf{Generacion real}: $z\!\sim\!\mathcal{N}(0,I)$
-          decodificado produce imagenes reconocibles del dataset.
-    \item \textbf{Dim latente $=$ trade-off}: para reconstruccion pura conviene
-          \textbf{8D}, pero elegimos
-          \textbf{2D} a proposito --- es lo unico que permite graficar el
-          \emph{manifold} y el latente \emph{directamente}, asumiendo el costo en detalle.
-    \item \textbf{$\beta=1.0$}: sweet spot rec/KL; KL warmup no es determinante en este caso.
+    \item El VAE logro \textbf{generar muestras plausibles} a partir de puntos del espacio latente.
+    \item El espacio latente en \textbf{2D} quedo ordenado y permitio ver
+          \textbf{interpolaciones suaves} entre muestras.
+    \item El principal aporte del VAE no fue mejorar la reconstruccion, sino
+          \textbf{hacer generativo} el modelo al organizar el latente.
+    \item Usar mas dimension latente mejora la reconstruccion, pero \textbf{2D} fue la mejor
+          eleccion para visualizar e interpretar los resultados.
   \end{itemize}
 \end{frame}
 
@@ -1115,13 +1111,10 @@
           ($2$D) reconstruye con error minimo, mientras que el AE lineal se queda en PCA.
     \item El \textbf{ruido como regularizador} (DAE): el modelo limpia
     incluso ruidos no vistos en entrenamiento.
-    \item Hay un \textbf{trade-off recurrente} entre capacidad/dimension del latente y
-          reconstruccion: mas capacidad ayuda con rendimientos decrecientes, y elegir
-          \textbf{2D} cuesta detalle pero habilita visualizar e interpretar el latente.
-    \item Lo decisivo es \textbf{como queda organizado el espacio latente}: el AE reconstruye
-          bien pero su latente no es estructurado $\Rightarrow$ no es generativo; el
-          \textbf{VAE} logra un latente continuo del que
-          se puede \textbf{muestrear e interpolar}.
+    \item Hay un \textbf{trade-off} entre dimension del latente y reconstruccion:
+          \textbf{2D} facilita visualizar el espacio, pero pierde algo de detalle.
+    \item El \textbf{VAE} aporta un latente \textbf{ordenado y generativo}:
+          permite muestrear e interpolar mejor que el AE basico.
   \end{itemize}
 \end{frame}
 
