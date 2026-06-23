@@ -398,17 +398,38 @@
 
 \section{Denoising Autoencoder}
 
-\begin{frame}{Planteo del DAE --- setup y ruido}
+\begin{frame}{Planteo del DAE --- ruido y generalizacion}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
+      \textbf{Modelos de ruido}
+      \begin{itemize}
+        \item \textbf{salt\&pepper}: invierte cada pixel con prob. $p$.
+        \item \textbf{gaussian}: $x + \mathcal{N}(0,\sigma^2)$, clip a $[0,1]$.
+        \item \textbf{masking}: pone a 0 una fraccion de pixeles.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textbf{A tener en cuenta}
+      \begin{itemize}
+        \item Entrenamos \textbf{solo con salt\&pepper}.
+        \item El ruido cambia en cada epoca: \textbf{online augmentation}.
+        \item \textbf{Gaussian} y \textbf{masking} se usan para validar
+              \emph{generalizacion} a ruido no visto.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Planteo del DAE --- parametros de entrenamiento}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
       \begin{table}\small
         \begin{tabular}{ll}
           \toprule
           Parametro & Valor \\
           \midrule
           Datos        & \texttt{font.h} ($32\times35$) \\
-          Tarea        & entrada ruidosa $\to$ target limpio \\
-          Augmentation & online (ruido nuevo cada epoca) \\
+          Augmentation & online \\
           Arquitectura & $[35,60,40,20,8,20,40,60,35]$ \\
           Activaciones & tanh (oculta), logistica (salida) \\
                        & cuello \emph{lineal} (identidad) \\
@@ -421,15 +442,16 @@
       \end{table}
     \end{column}
     \begin{column}{0.44\textwidth}
-      \textbf{Modelos de ruido} (barrido de evaluacion):
+      \textbf{Objetivo}
       \begin{itemize}
-        \item \textbf{salt\&pepper}: invierte cada pixel con prob. $p$.
-        \item \textbf{gaussian}: $x + \mathcal{N}(0,\sigma^2)$, clip a $[0,1]$.
-        \item \textbf{masking}: pone a 0 una fraccion de pixeles.
+        \item Con una \textbf{entrada ruidosa}, el modelo debe reconstruir el
+              \textbf{target limpio}.
       \end{itemize}
       \vspace{0.3em}
-      {\footnotesize Se entrena solo con salt\&pepper; gaussian y masking
-       miden \emph{generalizacion} a ruido no visto.}
+      \textbf{¿Por qué online?}
+      \begin{itemize}
+        \item Para que el DAE no memorice un patron fijo de ruido.
+      \end{itemize}
     \end{column}
   \end{columns}
 \end{frame}
