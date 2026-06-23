@@ -434,7 +434,7 @@
         \end{tabular}
       \end{table}
       {\scriptsize Cumplido \textbf{con margen} (max$=0$). Las 5 seeds llegan a
-       max$=0$; \texttt{model.npz} reproduce el resultado.}
+       max$=0$.}
     \end{column}
     \begin{column}{0.50\textwidth}
       \centering
@@ -670,8 +670,7 @@
       $\in \{$identidad, tanh$\}$.
 
       \vspace{0.6em}
-      \textbf{Pregunta}: ¿la activacion del latente cambia el denoising?
-      (en 1a el cuello era lineal).
+      \textbf{Pregunta}: ¿la activacion del latente cambia el denoising?.
 
       \vspace{0.4em}
       {\footnotesize Eval: barriendo el ruido $0\to0.40$; \textbf{media $\pm$ std}
@@ -686,6 +685,31 @@
    (resto fijo: ver parametros). 5 seeds.}
   \includegraphics[width=0.72\linewidth]{dae_bnactivation_curves.png}
   \vfill
+\end{frame}
+
+% ------------ DAE final (mejor configuracion) -------------------
+
+\begin{frame}{DAE final --- configuracion elegida}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos         & \texttt{font.h} ($32\times35$) \\
+          Arquitectura  & $[35,60,40,20,\mathbf{8},20,40,60,35]$ \\
+          Activaciones  & tanh (ocultas) / logistica (salida) \\
+                        & identidad (cuello \emph{lineal}) \\
+          Loss / Opt    & BCE / Adam $10^{-3}$ \\
+          Epocas / Batch & 12000 / full-batch (32) \\
+          Init / Seed   & Xavier / 42 \\
+          Ruido train   & salt\&pepper $p=0.10$ (online) \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \begin{frame}{Capacidad de denoising}
@@ -747,7 +771,7 @@
   \begin{itemize}\setlength\itemsep{6pt}
     \item Un AE no lineal con cuello \textbf{2D} memoriza las 32 letras con \textbf{0 píxeles de error},
           .
-    \item BCE + tanh + Adam funciona bien y es insensible al lr.
+    \item BCE + tanh + Adam.
     \item El \textbf{DAE} limpia salt\&pepper hasta $p\approx0.2$--$0.3$ y generaliza a ruidos
           no vistos en train (gaussian, masking).
     \item Cuello \textbf{8D lineal} es óptimo para denoising; el nivel de ruido de train tiene
@@ -799,13 +823,12 @@
           Datos         & emojis $16\!\times\!16$ (960) \\
           Arquitectura  & encoder/decoder simetricos \\
           Activaciones  & ReLU (ocultas) / logistica (salida) \\
-                        & / identidad (latente $\mu,\log\sigma^2$) \\
+                        & / identidad (latente) \\
           Loss / Opt    & BCE $+$ KL / Adam $10^{-3}$ \\
           $\beta$ / Batch & 1.0 / 64 \\
-          Epocas        & 400 \\
+          Epocas        & 1000 \\
           \textbf{Seeds}& \textbf{[0, 1, 2, 3, 42]} \\
-          Metrica       & rec MSE $+$ calidad visual \\
-                        & muestras $z\!\sim\!\mathcal{N}(0,I)$ \\
+          Metrica       & rec MSE \\
           \bottomrule
         \end{tabular}
       \end{table}
@@ -852,7 +875,7 @@
           Datos         & emojis $16\!\times\!16$ (960) \\
           Arquitectura  & encoder/decoder, latente 2D \\
           Activaciones  & ReLU (ocultas) / logistica (salida) \\
-                        & / identidad (latente $\mu,\log\sigma^2$) \\
+                        & / identidad (latente) \\
           Loss / Opt    & BCE $+$ $\beta\cdot$KL / Adam $10^{-3}$ \\
           Batch         & 64 \\
           Epocas        & 400 \\
@@ -878,7 +901,7 @@
 
 \begin{frame}{Estudio 2 --- espacio latente por $\beta$}
   \centering
-  {\scriptsize\color{gray} Varia: $\beta\in\{0{.}1,1{.}0,4{.}0\}$ (resto fijo: ver parametros). Seed representativa.}
+  {\scriptsize\color{gray} Varia: $\beta\in\{0{.}1,1{.}0,4{.}0\}$ (resto fijo: ver parametros).}
   \includegraphics[width=0.96\linewidth]{exp_beta_scatter.png}
   \vfill
   {\footnotesize Al subir $\beta$, los codigos se concentran mas cerca del origen.
@@ -917,10 +940,6 @@
     \end{column}
     \begin{column}{0.44\textwidth}
       \textit{Variable}: \textbf{recon\_loss} $\in \{$BCE, MSE$\}$.
-
-      \vspace{0.4em}
-      \textbf{Pregunta}: ¿que loss conviene en \textbf{2D} (la corrida final),
-      mirando reconstruccion \emph{y generacion}?
     \end{column}
   \end{columns}
 \end{frame}
@@ -1080,7 +1099,7 @@
   \centering
   \includegraphics[height=0.72\textheight]{generated_samples_latent16.png}
   \vfill
-  {\footnotesize Imagenes nuevas generadas en el espacio latente \textbf{16D}:
+  {\footnotesize Imagenes nuevas generadas en el espacio latente:
    combinan rasgos visuales del dataset sin copiar ejemplos de entrenamiento.}
 \end{frame}
 
