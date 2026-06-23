@@ -27,5 +27,5 @@ experiments:
     betas: [0.1, 1.0, 4.0]
     epochs: 400
   kl_warmup:
-    warmup_epochs: [0, 100]
+    warmup_epochs: [0, 200]
     epochs: 400

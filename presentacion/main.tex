@@ -672,7 +672,7 @@
 
 \begin{frame}{Objetivo e idea del VAE}
   \textbf{Objetivo}: construir un espacio latente \emph{organizado} del que se
-  pueda \textbf{samplear} para generar imagenes nuevas --- lo que el AE basico
+  pueda \textbf{muestrear} para generar imagenes nuevas --- lo que el AE basico
   no permite.
 
   \vspace{0.8em}
@@ -723,9 +723,8 @@
       \textbf{Pregunta}: ¿cuantas dimensiones necesita el espacio latente?
 
       \vspace{0.4em}
-      {\footnotesize 2D permite el manifold y la visualizacion directa;
-       mas dims pueden mejorar la reconstruccion a costa de perder
-       interpretabilidad.}
+      {\footnotesize 2D permite visualizar directamente el espacio latente;
+       mas dimension mejora reconstruccion, pero pierde interpretabilidad.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -735,7 +734,7 @@
   {\scriptsize\color{gray} Varia: dim latente $\in\{2,8,16\}$ (resto fijo: seed=42).}
   \includegraphics[height=0.78\textheight]{exp_latent_dim_reconstructions.png}
   \vfill
-  {\footnotesize Reconstrucci\'on con $z=\mu(x)$ (determin\'istico). Mayor dim $\Rightarrow$ m\'as detalle.}
+  {\footnotesize Mayor dim $\Rightarrow$ m\'as detalle.}
 \end{frame}
 
 \begin{frame}{Estudio 1 --- MSE por dim latente}
@@ -777,8 +776,8 @@
       reconstruccion?
 
       \vspace{0.4em}
-      {\footnotesize $\beta$ bajo $\Rightarrow$ latente libre, mala generacion.
-       $\beta$ alto $\Rightarrow$ clusters colapsados, rec peor.}
+      {\footnotesize $\beta$ bajo $\Rightarrow$ mejor reconstruccion, pero latente menos ordenado.
+       $\beta$ alto $\Rightarrow$ latente mas restringido, pero peor reconstruccion.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -788,9 +787,8 @@
   {\scriptsize\color{gray} Varia: $\beta\in\{0{.}1,1{.}0,4{.}0\}$ (resto fijo: ver parametros). Seed representativa.}
   \includegraphics[width=0.96\linewidth]{exp_beta_scatter.png}
   \vfill
-  {\footnotesize Mismos ejes en los 3 paneles: al subir $\beta$ la nube se \textbf{contrae hacia el origen}
-   ($\mathrm{KL}$ menor $\Rightarrow$ mas cerca del prior $\mathcal{N}(0,I)$).
-   $\beta=0{.}1$ ocupa todo el rango; $\beta=4{.}0$ colapsa al centro.}
+  {\footnotesize Al subir $\beta$, los codigos se concentran mas cerca del origen.
+   $\beta=0{.}1$ deja mas libertad; $\beta=4{.}0$ comprime demasiado.}
 \end{frame}
 
 \begin{frame}{Estudio 2 --- tradeoff rec/KL por $\beta$}
@@ -834,9 +832,8 @@
        detalle de reconstruccion.}
 
       \vspace{0.3em}
-      {\footnotesize BCE $=$ verosimilitud Bernoulli del pixel: gradiente limpio
-       $(\hat{x}-x)$ con salida logistica. MSE$+$logistica: el gradiente se
-       \emph{desvanece} en pixeles saturados $\Rightarrow$ tiende a la media (gris).}
+      {\footnotesize BCE produce reconstrucciones mas nitidas; con MSE las muestras
+       tienden a verse mas grises o lavadas.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -846,11 +843,9 @@
   {\scriptsize\color{gray} Varia: recon\_loss $\in\{$BCE, MSE$\}$ en latente 2D (resto fijo: ver parametros). 3 seeds [42,0,1].}
   \includegraphics[width=0.86\linewidth]{exp_vae_reconloss.png}
   \vfill
-  {\footnotesize En 2D, \textbf{MSE colapsa el latente} (KL $2{.}95$ vs $5{.}79$):
-   al ser el termino de reconstruccion mas chico, el KL pesa relativamente mas y
-   el encoder manda los codigos al centro $\Rightarrow$ menos info al decoder
-   $\Rightarrow$ generacion mas gris/lavada. \textbf{BCE} gana incluso medido en
-   MSE (rec-MSE \textbf{4.54 vs 6.49}). \textbf{Fijamos BCE} para la corrida final.}
+  {\footnotesize En 2D, \textbf{BCE} da mejores reconstrucciones y mejor generacion.
+   Con \textbf{MSE}, el latente se concentra mas y las muestras salen mas lavadas.
+   \textbf{Fijamos BCE} para la corrida final.}
 \end{frame}
 
 \begin{frame}{Estudio 4 --- capacidad de la arquitectura: parametros}
@@ -890,13 +885,8 @@
   {\scriptsize\color{gray} Varia: ancho/profundidad encoder/decoder (resto fijo: ver parametros). 3 seeds [42,0,1].}
   \includegraphics[width=0.96\linewidth]{exp_vae_arch.png}
   \vfill
-  {\footnotesize Por \textbf{rec-MSE} la capacidad parece importar mucho
-   ($6{.}80\!\to\!5{.}12\!\to\!4{.}34$), con \textbf{rendimientos decrecientes};
-   la \textbf{profunda} iguala a la ancha ($4{.}34$ vs $4{.}37$) con $\sim$mitad de params.
-   Pero por la \textbf{loss completa} ($\text{rec}+\beta\text{KL}$) las 4 quedan
-   \textbf{casi iguales} ($122\!\to\!116$): al subir la capacidad mejora la rec pero
-   \textbf{sube el KL} ($4{.}9\!\to\!5{.}9$), que \emph{compensa} la ganancia. La
-   reconstruccion sola exagera el efecto; en el objetivo real la arquitectura casi no mueve la aguja.}
+  {\footnotesize Mas capacidad mejora la reconstruccion, pero con rendimientos
+   decrecientes. En la loss total, las diferencias entre arquitecturas son mucho menores.}
 \end{frame}
 
 \begin{frame}{Estudio 5 --- KL warmup: parametros}
@@ -939,7 +929,7 @@
   \vfill
   {\footnotesize Ambas convergen practicamente igual
    (rec$\approx113{.}4$--$113{.}5$, KL$\approx5{.}61$--$5{.}64$).
-   \textbf{Warmup no es determinante} $\Rightarrow$ usamos $\beta=1$ desde ep.\,0.}
+   \textbf{Warmup no cambia sustancialmente el resultado} $\Rightarrow$ usamos $\beta=1$ desde ep.\,0.}
 \end{frame}
 
 % ------------ Corrida final (mejor configuracion) ---------------
@@ -990,16 +980,15 @@
   \centering
   \includegraphics[width=0.54\linewidth]{../ej2/results/long_16px/latent_scatter.png}
   \vfill
-  {\footnotesize Cada punto es $\mu(x)$. El KL forzo el latente hacia
-   $\mathcal{N}(0,I)$: clusters por clase cerca del origen,
-   \textbf{continuos y separados}.}
+  {\footnotesize Cada punto es $\mu(x)$. El KL empuja los codigos hacia una
+   distribucion mas regular y continua.}
 \end{frame}
 
 \begin{frame}{Reconstruccion}
   \centering
   \includegraphics[width=0.92\linewidth]{reconstructions.png}
   \vfill
-  {\footnotesize Arriba: original; abajo: $\hat{x}$ con $z=\mu$ (deterministico).
+  {\footnotesize Arriba: original; abajo: reconstruccion usando $z=\mu(x)$.
    Fiel en las 16 clases.}
 \end{frame}
 
@@ -1015,8 +1004,8 @@
   \centering
   \includegraphics[height=0.72\textheight]{samples.png}
   \vfill
-  {\footnotesize $z\sim\mathcal{N}(0,I)$ decodificados: el VAE genera imagenes
-   \textbf{nuevas y reconocibles} del dataset.}
+  {\footnotesize Muestras con $z\sim\mathcal{N}(0,I)$: el VAE genera imagenes
+   \textbf{nuevas y plausibles} del dataset.}
 \end{frame}
 
 \begin{frame}{Interpolacion en el latente}
@@ -1031,7 +1020,7 @@
   \begin{itemize}\setlength\itemsep{6pt}
     \item El VAE impone $p(z)=\mathcal{N}(0,I)$ via KL $\Rightarrow$ latente
           \textbf{continuo y organizado}: clusters por clase, interpolacion suave.
-    \item \textbf{Manifold 2D}: todo punto del latente genera un emoji valido;
+    \item \textbf{Manifold 2D}: gran parte del latente genera emojis plausibles;
           la grilla $15\!\times\!15$ lo confirma visualmente.
     \item \textbf{Generacion real}: $z\!\sim\!\mathcal{N}(0,I)$
           decodificado produce imagenes reconocibles del dataset.

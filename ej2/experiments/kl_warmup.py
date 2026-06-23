@@ -1,4 +1,4 @@
-"""Estudio 4 (multi-seed) — KL warmup {0, 100} epocas.
+"""Estudio 4 (multi-seed) — KL warmup {0, 200} epocas.
 
 5 seeds × 2 warmups = 10 corridas.
 CSV: exp_kl_warmup.csv  (una fila por seed × epoch × warmup — historiales completos
@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from shared.plotting import save_fig, PALETTE
 from ej2.experiments._common import load_emojis, train_vae, RESULTS_DIR
 
-WARMUPS = [0, 100]
+WARMUPS = [0, 200]
 SEEDS   = [0, 1, 2, 3, 42]
 EPOCHS  = 400
 
@@ -84,9 +84,9 @@ def main():
 
     # Figura: 2 paneles (rec y KL) con banda media ± std
     epochs_ax = np.arange(1, EPOCHS + 1)
-    colors = {0: PALETTE["primary"], 100: PALETTE["secondary"]}
+    colors = {0: PALETTE["primary"], 200: PALETTE["secondary"]}
     labels_w = {0: "sin warmup (β=1 desde ep. 0)",
-                100: "warmup=100 (β sube en 100 ep.)"}
+                200: "warmup=200 (β sube en 200 ep.)"}
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
 
