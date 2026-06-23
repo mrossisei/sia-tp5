@@ -648,40 +648,18 @@
 
 \section{Autoencoder Variacional (VAE)}
 
-\begin{frame}{Planteo del VAE}
-  \begin{columns}[T]
-    \begin{column}{0.55\textwidth}
-      \begin{table}\small
-        \begin{tabular}{ll}
-          \toprule
-          Parametro & Valor \\
-          \midrule
-          Datos         & emojis $16\!\times\!16$ gris \\
-                        & 16 clases, 60/clase (960) \\
-          Encoder       & $256\!\to\!256\!\to\!64\!\to\!(\mu,\log\sigma^2)\!\in\!\mathbb{R}^2$ \\
-          Decoder       & $\mathbb{R}^2\!\to\!64\!\to\!256\!\to\!256$ \\
-          Activaciones  & ReLU (ocultas) / logistica (salida) \\
-                        & identidad ($\mu$, $\log\sigma^2$) \\
-          Loss / Opt    & BCE $+$ $\beta\cdot$KL / Adam $10^{-3}$ \\
-          $\beta$ / Batch & 1.0 / 64 \\
-          Epocas / Seed & 50.000 / 42 \\
-          \bottomrule
-        \end{tabular}
-      \end{table}
-    \end{column}
-    \begin{column}{0.44\textwidth}
-      \textbf{Diferencia con el AE:} el encoder produce los
-      \emph{parametros} de $q(z|x)=\mathcal{N}(\mu,\sigma^2)$, no $z$ directo.
+\begin{frame}{Objetivo e idea del VAE}
+  \textbf{Objetivo}: construir un espacio latente \emph{organizado} del que se
+  pueda \textbf{samplear} para generar imagenes nuevas --- lo que el AE basico
+  no permite.
 
-      \vspace{0.5em}
-      $z = \mu + \sigma \odot \varepsilon$,\quad $\varepsilon\!\sim\!\mathcal{N}(0,I)$
+  \vspace{0.8em}
+  \textbf{Dataset}: emojis $16\!\times\!16$ en escala de grises, 16 clases con
+  60 variaciones cada una (960 imagenes).
 
-      \vspace{0.5em}
-      {\footnotesize El KL regulariza el latente hacia $p(z)=\mathcal{N}(0,I)$:
-       el espacio queda \textbf{organizado} y permite samplear puntos nuevos
-       con sentido.}
-    \end{column}
-  \end{columns}
+  \vspace{0.8em}
+  \textbf{Plan}: primero \emph{barremos hiperparametros} y luego corremos un VAE
+  final con la mejor configuracion encontrada.
 \end{frame}
 
 \begin{frame}{El dataset: emojis $16\!\times\!16$}
@@ -692,56 +670,7 @@
    flor, pulgar), 60 variaciones por clase --- 960 imagenes en escala de grises.}
 \end{frame}
 
-\begin{frame}{Curvas de aprendizaje}
-  \centering
-  \includegraphics[width=0.94\linewidth]{vae_loss_panels.png}
-  \vfill
-  {\footnotesize \textbf{Rec} baja: el decoder aprende a reconstruir.
-   \textbf{KL} sube y se estabiliza: el encoder organiza el latente.}
-\end{frame}
-
-\begin{frame}{El latente se organiza}
-  \centering
-  \includegraphics[width=0.54\linewidth]{../ej2/results/long_16px/latent_scatter.png}
-  \vfill
-  {\footnotesize Cada punto es $\mu(x)$. El KL forzo el latente hacia
-   $\mathcal{N}(0,I)$: clusters por clase cerca del origen,
-   \textbf{continuos y separados}.}
-\end{frame}
-
-\begin{frame}{Reconstruccion}
-  \centering
-  \includegraphics[width=0.92\linewidth]{reconstructions.png}
-  \vfill
-  {\footnotesize Arriba: original; abajo: $\hat{x}$ con $z=\mu$ (deterministico).
-   Fiel en las 16 clases.}
-\end{frame}
-
-\begin{frame}{Manifold generativo}
-  \centering
-  \includegraphics[height=0.74\textheight]{manifold_grid.png}
-  \vfill
-  {\footnotesize El decoder genera emojis plausibles en distintas regiones del plano, mostrando un
-   \textbf{manifold continuo}: puntos cercanos producen imágenes parecidas.}
-\end{frame}
-
-\begin{frame}{Generacion: nuevas muestras}
-  \centering
-  \includegraphics[height=0.72\textheight]{samples.png}
-  \vfill
-  {\footnotesize $z\sim\mathcal{N}(0,I)$ decodificados: el VAE genera imagenes
-   \textbf{nuevas y reconocibles} del dataset.}
-\end{frame}
-
-\begin{frame}{Interpolacion en el latente}
-  \centering
-  \includegraphics[width=0.90\linewidth]{interpolation_feliz_corazon_latent8.png}
-  \vfill
-  {\footnotesize Interpolacion fija entre \texttt{cara\_feliz} y \texttt{corazon}:
-   la transicion se vuelve mas visible entre clases visualmente distintas.}
-\end{frame}
-
-% ------------ Experimentos VAE --------------------------------
+% ------------ Experimentos VAE (pruebas de hiperparametros) -----
 
 \begin{frame}{Estudio 1 --- dimension del latente: parametros}
   \begin{columns}[T]
@@ -852,7 +781,91 @@
    \textbf{$\beta=1{.}0$}: equilibrio elegido (rec$=113{.}5$, KL$=5{.}61$).}
 \end{frame}
 
-\begin{frame}{Estudio 3 --- KL warmup: parametros}
+\begin{frame}{Estudio 3 --- reconstruccion BCE vs MSE: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos         & emojis $16\!\times\!16$ (960) \\
+          Arquitectura  & $[256,64]/[64,256]$, latente 16D \\
+          Salida        & logistica (pixeles en $(0,1)$) \\
+          Opt / Epocas  & Adam $10^{-3}$ / 400 \\
+          \textbf{Seeds}& \textbf{[42, 0, 1]} \\
+          Metrica       & rec-MSE (comun), nitidez, KL \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textit{Variable}: \textbf{recon\_loss} $\in \{$BCE, MSE$\}$.
+
+      \vspace{0.4em}
+      \textbf{Pregunta}: ¿BCE reconstruye mejor que MSE en imagenes $[0,1]$?
+
+      \vspace{0.3em}
+      {\footnotesize Latente \textbf{16D} (no 2D): a 2D el cuello aplasta todo y
+       ninguna se ve nitida; con mas capacidad la reconstruccion es legible y la
+       diferencia se aprecia.}
+
+      \vspace{0.3em}
+      {\footnotesize BCE $=$ verosimilitud Bernoulli del pixel: gradiente limpio
+       $(\hat{x}-x)$ con salida logistica. MSE$+$logistica: el gradiente se
+       \emph{desvanece} en pixeles saturados $\Rightarrow$ tiende a la media (gris).}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Estudio 3 --- BCE vs MSE: resultados}
+  \centering
+  {\scriptsize\color{gray} Varia: recon\_loss $\in\{$BCE, MSE$\}$ (resto fijo: ver parametros). 3 seeds [42,0,1].}
+  \includegraphics[width=0.86\linewidth]{exp_vae_reconloss.png}
+\end{frame}
+
+\begin{frame}{Estudio 4 --- capacidad de la arquitectura: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos         & emojis $16\!\times\!16$ (960) \\
+          Loss / Opt    & BCE / Adam $10^{-3}$ \\
+          Latente / Batch & 2D / 64 \\
+          Epocas        & 400 \\
+          \textbf{Seeds}& \textbf{[42, 0, 1]} \\
+          Metrica       & rec-MSE (comun) $+$ n params \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textit{Variable}: \textbf{ancho/profundidad} del encoder/decoder:
+      \begin{itemize}\setlength\itemsep{1pt}
+        \item[] {\footnotesize angosta $[128]/[128]$ (67k)}
+        \item[] {\footnotesize base $[256,64]/[64,256]$ (165k)}
+        \item[] {\footnotesize ancha $[512,128]/[128,512]$ (396k)}
+        \item[] {\footnotesize profunda $[256,128,64]/\!\dots$ (215k)}
+      \end{itemize}
+      \textbf{Pregunta}: ¿cuanta capacidad fuera del cuello 2D conviene?
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Estudio 4 --- arquitectura: resultados}
+  \centering
+  {\scriptsize\color{gray} Varia: ancho/profundidad encoder/decoder (resto fijo: ver parametros). 3 seeds [42,0,1].}
+  \includegraphics[width=0.96\linewidth]{exp_vae_arch.png}
+  \vfill
+  {\footnotesize rec-MSE baja con la capacidad ($6{.}80\!\to\!5{.}12\!\to\!4{.}34$) con
+   \textbf{rendimientos decrecientes} (el cuello 2D limita). La \textbf{profunda} iguala
+   a la ancha ($4{.}34$ vs $4{.}37$) con $\sim$mitad de params $\Rightarrow$ profundidad mas eficiente.}
+\end{frame}
+
+\begin{frame}{Estudio 5 --- KL warmup: parametros}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{table}\small
@@ -885,7 +898,7 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Estudio 3 --- efecto del KL warmup}
+\begin{frame}{Estudio 5 --- efecto del KL warmup}
   \centering
   {\scriptsize\color{gray} Varia: warmup $\in\{0,100\}$ epocas (resto fijo: ver parametros). 5 seeds [0,1,2,3,42].}
   \includegraphics[width=0.88\linewidth]{exp_kl_warmup.png}
@@ -893,6 +906,91 @@
   {\footnotesize Ambas convergen practicamente igual
    (rec$\approx113{.}4$--$113{.}5$, KL$\approx5{.}61$--$5{.}64$).
    \textbf{Warmup no es determinante} $\Rightarrow$ usamos $\beta=1$ desde ep.\,0.}
+\end{frame}
+
+% ------------ Corrida final (mejor configuracion) ---------------
+
+\begin{frame}{Corrida final --- configuracion elegida}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos         & emojis $16\!\times\!16$ gris \\
+                        & 16 clases, 60/clase (960) \\
+          Encoder       & $256\!\to\!256\!\to\!64\!\to\!(\mu,\log\sigma^2)\!\in\!\mathbb{R}^2$ \\
+          Decoder       & $\mathbb{R}^2\!\to\!64\!\to\!256\!\to\!256$ \\
+          Activaciones  & ReLU (ocultas) / logistica (salida) \\
+                        & identidad ($\mu$, $\log\sigma^2$) \\
+          Loss / Opt    & BCE $+$ $\beta\cdot$KL / Adam $10^{-3}$ \\
+          $\beta$ / Batch & 1.0 / 64 \\
+          Epocas / Seed & 50.000 / 42 \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textbf{De los experimentos:} latente \textbf{2D} (manifold y
+      visualizacion directa), \textbf{BCE}, $\boldsymbol{\beta=1.0}$ (sweet spot
+      rec/KL), arquitectura base y \textbf{sin KL warmup}.
+
+      \vspace{0.6em}
+      {\footnotesize Con esa configuracion entrenamos una corrida larga
+       (50.000 epocas) y analizamos el latente, la reconstruccion, el manifold
+       generativo y la generacion de muestras nuevas.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Curvas de aprendizaje}
+  \centering
+  \includegraphics[width=0.94\linewidth]{vae_loss_panels.png}
+  \vfill
+  {\footnotesize \textbf{Rec} baja: el decoder aprende a reconstruir.
+   \textbf{KL} sube y se estabiliza: el encoder organiza el latente.}
+\end{frame}
+
+\begin{frame}{El latente se organiza}
+  \centering
+  \includegraphics[width=0.54\linewidth]{../ej2/results/long_16px/latent_scatter.png}
+  \vfill
+  {\footnotesize Cada punto es $\mu(x)$. El KL forzo el latente hacia
+   $\mathcal{N}(0,I)$: clusters por clase cerca del origen,
+   \textbf{continuos y separados}.}
+\end{frame}
+
+\begin{frame}{Reconstruccion}
+  \centering
+  \includegraphics[width=0.92\linewidth]{reconstructions.png}
+  \vfill
+  {\footnotesize Arriba: original; abajo: $\hat{x}$ con $z=\mu$ (deterministico).
+   Fiel en las 16 clases.}
+\end{frame}
+
+\begin{frame}{Manifold generativo}
+  \centering
+  \includegraphics[height=0.74\textheight]{manifold_grid.png}
+  \vfill
+  {\footnotesize El decoder genera emojis plausibles en distintas regiones del plano, mostrando un
+   \textbf{manifold continuo}: puntos cercanos producen imágenes parecidas.}
+\end{frame}
+
+\begin{frame}{Generacion: nuevas muestras}
+  \centering
+  \includegraphics[height=0.72\textheight]{samples.png}
+  \vfill
+  {\footnotesize $z\sim\mathcal{N}(0,I)$ decodificados: el VAE genera imagenes
+   \textbf{nuevas y reconocibles} del dataset.}
+\end{frame}
+
+\begin{frame}{Interpolacion en el latente}
+  \centering
+  \includegraphics[width=0.90\linewidth]{interpolation_feliz_corazon_latent8.png}
+  \vfill
+  {\footnotesize Interpolacion fija entre \texttt{cara\_feliz} y \texttt{corazon}:
+   la transicion se vuelve mas visible entre clases visualmente distintas.}
 \end{frame}
 
 \begin{frame}{Conclusiones EJ2}
