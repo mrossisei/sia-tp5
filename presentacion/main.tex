@@ -906,8 +906,10 @@
           \midrule
           Datos         & emojis $16\!\times\!16$ (960) \\
           Arquitectura  & $[256,64]/[64,256]$, \textbf{latente 2D} \\
-          Salida        & logistica (pixeles en $(0,1)$) \\
-          Opt / Epocas  & Adam $10^{-3}$ / 600 \\
+          Activaciones  & ReLU (ocultas) / logistica (salida) \\
+          Loss / Opt    & recon $+$ $\beta\cdot$KL / Adam $10^{-3}$ \\
+          $\beta$ / Batch & 1.0 / 64 \\
+          Epocas        & 600 \\
           \textbf{Seeds}& \textbf{[42, 0, 1]} \\
           Metrica       & rec-MSE (comun), KL, generacion \\
           \bottomrule
@@ -920,27 +922,13 @@
       \vspace{0.4em}
       \textbf{Pregunta}: ¿que loss conviene en \textbf{2D} (la corrida final),
       mirando reconstruccion \emph{y generacion}?
-
-      \vspace{0.3em}
-      {\footnotesize Lo evaluamos en \textbf{2D} (no 16D): es la dim que usamos
-       de verdad, y nos importa la \emph{consecuencia generativa}, no solo el
-       detalle de reconstruccion.}
-
-      \vspace{0.3em}
-      {\footnotesize BCE produce reconstrucciones mas nitidas; con MSE las muestras
-       tienden a verse mas grises o lavadas.}
     \end{column}
   \end{columns}
 \end{frame}
 
 \begin{frame}{Estudio 3 --- BCE vs MSE: resultados}
   \centering
-  {\scriptsize\color{gray} Varia: recon\_loss $\in\{$BCE, MSE$\}$ en latente 2D (resto fijo: ver parametros). 3 seeds [42,0,1].}
-  \includegraphics[width=0.86\linewidth]{exp_vae_reconloss.png}
-  \vfill
-  {\footnotesize En 2D, \textbf{BCE} da mejores reconstrucciones y mejor generacion.
-   Con \textbf{MSE}, el latente se concentra mas y las muestras salen mas lavadas.
-   \textbf{Fijamos BCE} para la corrida final.}
+  \includegraphics[width=0.92\linewidth]{exp_vae_reconloss.png}
 \end{frame}
 
 \begin{frame}{Estudio 4 --- capacidad de la arquitectura: parametros}
@@ -952,9 +940,10 @@
           Parametro & Valor \\
           \midrule
           Datos         & emojis $16\!\times\!16$ (960) \\
-          Loss / Opt    & BCE / Adam $10^{-3}$ \\
-          Latente / Batch & 2D / 64 \\
-          Epocas        & 400 \\
+          Activaciones  & ReLU (ocultas) / logistica (salida) \\
+          Loss / Opt    & BCE $+$ $\beta\cdot$KL / Adam $10^{-3}$ \\
+          $\beta$ / Batch & 1.0 / 64 \\
+          Latente / Epocas & 2D / 400 \\
           \textbf{Seeds}& \textbf{[42, 0, 1]} \\
           Metrica       & rec-MSE, rec\_BCE, KL, \\
                         & loss $=$ rec$+\beta$KL, n params \\
@@ -978,10 +967,7 @@
 \begin{frame}{Estudio 4 --- arquitectura: resultados}
   \centering
   {\scriptsize\color{gray} Varia: ancho/profundidad encoder/decoder (resto fijo: ver parametros). 3 seeds [42,0,1].}
-  \includegraphics[width=0.96\linewidth]{exp_vae_arch.png}
-  \vfill
-  {\footnotesize Mas capacidad mejora la reconstruccion, pero con rendimientos
-   decrecientes. En la loss total, las diferencias entre arquitecturas son mucho menores.}
+  \includegraphics[width=0.62\linewidth]{exp_vae_arch.png}
 \end{frame}
 
 \begin{frame}{Estudio 5 --- KL warmup: parametros}
@@ -1067,16 +1053,12 @@
   \centering
   \includegraphics[width=0.94\linewidth]{vae_loss_panels.png}
   \vfill
-  {\footnotesize \textbf{Rec} baja: el decoder aprende a reconstruir.
-   \textbf{KL} sube y se estabiliza: el encoder organiza el latente.}
 \end{frame}
 
 \begin{frame}{El latente se organiza}
   \centering
   \includegraphics[width=0.54\linewidth]{../ej2/results/long_16px/latent_scatter.png}
   \vfill
-  {\footnotesize Cada punto es $\mu(x)$. El KL empuja los codigos hacia una
-   distribucion mas regular y continua.}
 \end{frame}
 
 \begin{frame}{Reconstruccion}
@@ -1120,7 +1102,7 @@
     \item \textbf{Generacion real}: $z\!\sim\!\mathcal{N}(0,I)$
           decodificado produce imagenes reconocibles del dataset.
     \item \textbf{Dim latente $=$ trade-off}: para reconstruccion pura conviene
-          \textbf{8D} (la rec satura ahi: 16D ya no aporta), pero elegimos
+          \textbf{8D}, pero elegimos
           \textbf{2D} a proposito --- es lo unico que permite graficar el
           \emph{manifold} y el latente \emph{directamente}, asumiendo el costo en detalle.
     \item \textbf{$\beta=1.0$}: sweet spot rec/KL; KL warmup no es determinante en este caso.

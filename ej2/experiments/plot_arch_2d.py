@@ -55,7 +55,7 @@ def main():
     x = np.arange(len(archs))
     pl = [f"{npar[a]/1000:.0f}k" for a in archs]  # etiqueta de params
 
-    fig, (axL, axR) = plt.subplots(1, 2, figsize=(11, 4.4))
+    fig, axL = plt.subplots(1, 1, figsize=(6.5, 4.4))
 
     # --- izq: loss total apilada = rec_BCE + beta*KL ----------------------
     rec_bce = np.array([stats[a]["rec_bce"] for a in archs])
@@ -73,7 +73,7 @@ def main():
                  va="center", fontsize=7, color="white", fontweight="bold")
     # total arriba de cada barra (por encima de la barra de error)
     for xi, t, s in zip(x, total, loss_std):
-        axL.text(xi, t + s, f"{t:.1f}", ha="center", va="bottom",
+        axL.text(xi, t + s, f"{t:.1f} $\\pm$ {s:.1f}", ha="center", va="bottom",
                  fontsize=9, fontweight="bold")
     axL.set_ylim(0, total.max() * 1.18)
     axL.set_xticks(x); axL.set_xticklabels(archs)
@@ -82,19 +82,6 @@ def main():
                   fontsize=9)
     axL.legend(fontsize=8, loc="lower right")
 
-    # --- der: rec-MSE (metrica comun) -------------------------------------
-    rec_mse = np.array([stats[a]["rec_mse"] for a in archs])
-    err = np.array([stds[a]["rec_mse"] for a in archs])
-    bars = axR.bar(x, rec_mse, yerr=err, capsize=4, color=PALETTE["positive"])
-    for xi, v, p in zip(x, rec_mse, pl):
-        axR.text(xi, v, f"{v:.2f}\n({p})", ha="center", va="bottom",
-                 fontsize=8, fontweight="bold")
-    axR.set_ylim(0, rec_mse.max() * 1.22)
-    axR.set_xticks(x); axR.set_xticklabels(archs)
-    axR.set_title("rec-MSE (comun, menor mejor)", fontsize=10)
-
-    fig.suptitle("Estudio 4 (2D) --- capacidad: loss completa vs rec-MSE "
-                 "(etiqueta = nº params)", y=1.0, fontsize=11)
     fig.tight_layout()
     save_fig(fig, OUT_PATH)
     print(f"[ok] figura -> {OUT_PATH}")

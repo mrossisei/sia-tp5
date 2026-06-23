@@ -82,17 +82,12 @@ def main():
             if j == 0:
                 ax.set_ylabel(l.upper(), fontsize=11, rotation=0,
                               labelpad=18, va="center")
-    fig.text(0.34, 0.93, "Generacion z~N(0,I) (latente 2D, mismos z)",
-             ha="center", fontsize=11)
-
     colors = [PALETTE["positive"], PALETTE["negative"]]
     bar_panel(fig.add_subplot(gs[0, 1]), metrics, "rec_mse",
               "rec-MSE (comun, menor mejor)", colors)
     bar_panel(fig.add_subplot(gs[1, 1]), metrics, "kl",
               "KL (nats): MSE colapsa el latente", colors)
 
-    fig.suptitle("Estudio 3 (2D) --- BCE vs MSE: con MSE el latente colapsa y la "
-                 "generacion se va a gris", y=1.0, fontsize=11)
     save_fig(fig, OUT_PATH)
     print(f"[ok] figura -> {OUT_PATH}")
 
