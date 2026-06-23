@@ -18,6 +18,8 @@ la profundidad, asi que [35, 2, 35] no pierde generalidad como "AE lineal".
 Genera (en ej1/results/basic/):
   - exp_linear_ae.png       : max pixel-error del AE lineal por seed (panel unico)
   - exp_linear_ae_worst.png : las 6 letras peor reconstruidas (error en rojo)
+  - exp_linear_ae_latent.png: latente 2D aprendido por el AE lineal (seed 0)
+  - exp_linear_ae_vs_pca_latent.png: AE lineal vs PCA, lado a lado
   - exp_linear_ae.csv       : tabla seed -> max/mean pixel-error, rec_MSE (incluye
                               fila PCA; rec_MSE coincide => el AE lineal == PCA)
 
@@ -141,6 +143,38 @@ def fig_worst_letters(X, labels, rec, k, path):
     save_fig(fig, path)
 
 
+def _annotated_scatter(ax, Z, labels, color, title, xlabel="z1", ylabel="z2"):
+    ax.scatter(Z[:, 0], Z[:, 1], c=color, s=60, alpha=0.65,
+               edgecolors="k", linewidths=0.5, zorder=2)
+    for i, lab in enumerate(labels):
+        ax.annotate(lab, (Z[i, 0], Z[i, 1]), fontsize=10, fontweight="bold",
+                    ha="center", va="center", zorder=3)
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.grid(True, alpha=0.3)
+
+
+def fig_linear_latent(Z_lin, labels, path):
+    fig, ax = plt.subplots(figsize=(8, 7))
+    _annotated_scatter(ax, Z_lin, labels, PALETTE["negative"],
+                       "Espacio latente 2D del AE lineal")
+    fig.tight_layout()
+    save_fig(fig, path)
+
+
+def fig_linear_vs_pca_latent(Z_lin, pcs, var_ratio, labels, path):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13.5, 6.2))
+    _annotated_scatter(ax1, Z_lin, labels, PALETTE["negative"], "AE lineal (seed 0)")
+    _annotated_scatter(ax2, pcs, labels, PALETTE["accent"], "PCA 2D",
+                       xlabel=f"PC1 ({var_ratio[0]*100:.1f}% var)",
+                       ylabel=f"PC2 ({var_ratio[1]*100:.1f}% var)")
+    fig.suptitle("AE lineal vs PCA: subespacio equivalente, coordenadas no identicas",
+                 fontsize=13, y=0.98)
+    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    save_fig(fig, path)
+
+
 def main():
     t0 = time.time()
     X, labels = load_font()
@@ -152,12 +186,15 @@ def main():
 
     # AE lineal por seed
     rows, seed_max, seed_mse = [], [], []
+    ae_seed0 = None
     for seed in SEEDS:
         t = time.time()
-        _, _, s, mse, rec = train_linear(X, seed)
+        ae, _, s, mse, rec = train_linear(X, seed)
         seed_max.append(s["max"])
         seed_mse.append(mse)
         rows.append((seed, s["max"], s["mean"], s["n_exact"], mse))
+        if seed == SEEDS[0]:
+            ae_seed0 = ae
         print(f"[AE lineal seed={seed}] max={s['max']} mean={s['mean']:.3f} "
               f"exactas={s['n_exact']}/32 rec_MSE={mse:.4f} ({time.time()-t:.0f}s)",
               flush=True)
@@ -171,6 +208,13 @@ def main():
 
     fig_results(seed_max, os.path.join(OUT, "exp_linear_ae.png"))
     fig_worst_letters(X, labels, pca_rec, 6, os.path.join(OUT, "exp_linear_ae_worst.png"))
+    if ae_seed0 is not None:
+        Z_lin = ae_seed0.encode(X)
+        fig_linear_latent(Z_lin, labels, os.path.join(OUT, "exp_linear_ae_latent.png"))
+        fig_linear_vs_pca_latent(
+            Z_lin, pcs, var_ratio, labels,
+            os.path.join(OUT, "exp_linear_ae_vs_pca_latent.png")
+        )
 
     with open(os.path.join(OUT, "exp_linear_ae.csv"), "w", newline="") as f:
         w = csv.writer(f)
