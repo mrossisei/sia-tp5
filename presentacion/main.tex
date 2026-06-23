@@ -59,7 +59,7 @@
 
 \title{Autoencoders}
 \author{Sistemas de Inteligencia Artificial}
-\institute{ITBA --- 2026}
+\institute{Grupo 6 --- ITBA --- 2026}
 \date{\today}
 
 \begin{document}
@@ -1107,6 +1107,26 @@
           \emph{manifold} y el latente \emph{directamente}, asumiendo el costo en detalle.
     \item \textbf{$\beta=1.0$}: sweet spot rec/KL; KL warmup no es determinante en este caso.
   \end{itemize}
+\end{frame}
+
+\begin{frame}{Conclusiones generales}
+  \begin{itemize}\setlength\itemsep{6pt}
+    \item La \textbf{no linealidad} es lo que vuelve util al autoencoder: un cuello chico
+          ($2$D) reconstruye con error minimo, mientras que el AE lineal se queda en PCA.
+    \item El \textbf{ruido como regularizador} (DAE): el modelo limpia
+    incluso ruidos no vistos en entrenamiento.
+    \item Hay un \textbf{trade-off recurrente} entre capacidad/dimension del latente y
+          reconstruccion: mas capacidad ayuda con rendimientos decrecientes, y elegir
+          \textbf{2D} cuesta detalle pero habilita visualizar e interpretar el latente.
+    \item Lo decisivo es \textbf{como queda organizado el espacio latente}: el AE reconstruye
+          bien pero su latente no es estructurado $\Rightarrow$ no es generativo; el
+          \textbf{VAE} logra un latente continuo del que
+          se puede \textbf{muestrear e interpolar}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[standout]
+  Muchas gracias por escucharnos
 \end{frame}
 
 \end{document}
