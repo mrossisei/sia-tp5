@@ -688,6 +688,31 @@
   \vfill
 \end{frame}
 
+% ------------ DAE final (mejor configuracion) -------------------
+
+\begin{frame}{DAE final --- configuracion elegida}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos         & \texttt{font.h} ($32\times35$) \\
+          Arquitectura  & $[35,60,40,20,\mathbf{8},20,40,60,35]$ \\
+          Activaciones  & tanh (ocultas) / logistica (salida) \\
+                        & identidad (cuello \emph{lineal}) \\
+          Loss / Opt    & BCE / Adam $10^{-3}$ \\
+          Epocas / Batch & 12000 / full-batch (32) \\
+          Init / Seed   & Xavier / 42 \\
+          Ruido train   & salt\&pepper $p=0.10$ (online) \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+  \end{columns}
+\end{frame}
+
 \begin{frame}{Capacidad de denoising}
   \centering
   {\scriptsize\color{gray} DAE final: cuello 8D, entrenado con salt\&pepper $p=0.10$.}
