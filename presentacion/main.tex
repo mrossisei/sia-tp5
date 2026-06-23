@@ -824,13 +824,12 @@
           Datos         & emojis $16\!\times\!16$ (960) \\
           Arquitectura  & encoder/decoder simetricos \\
           Activaciones  & ReLU (ocultas) / logistica (salida) \\
-                        & / identidad (latente $\mu,\log\sigma^2$) \\
+                        & / identidad (latente) \\
           Loss / Opt    & BCE $+$ KL / Adam $10^{-3}$ \\
           $\beta$ / Batch & 1.0 / 64 \\
-          Epocas        & 400 \\
+          Epocas        & 1000 \\
           \textbf{Seeds}& \textbf{[0, 1, 2, 3, 42]} \\
-          Metrica       & rec MSE $+$ calidad visual \\
-                        & muestras $z\!\sim\!\mathcal{N}(0,I)$ \\
+          Metrica       & rec MSE \\
           \bottomrule
         \end{tabular}
       \end{table}
@@ -877,7 +876,7 @@
           Datos         & emojis $16\!\times\!16$ (960) \\
           Arquitectura  & encoder/decoder, latente 2D \\
           Activaciones  & ReLU (ocultas) / logistica (salida) \\
-                        & / identidad (latente $\mu,\log\sigma^2$) \\
+                        & / identidad (latente) \\
           Loss / Opt    & BCE $+$ $\beta\cdot$KL / Adam $10^{-3}$ \\
           Batch         & 64 \\
           Epocas        & 400 \\
@@ -903,7 +902,7 @@
 
 \begin{frame}{Estudio 2 --- espacio latente por $\beta$}
   \centering
-  {\scriptsize\color{gray} Varia: $\beta\in\{0{.}1,1{.}0,4{.}0\}$ (resto fijo: ver parametros). Seed representativa.}
+  {\scriptsize\color{gray} Varia: $\beta\in\{0{.}1,1{.}0,4{.}0\}$ (resto fijo: ver parametros).}
   \includegraphics[width=0.96\linewidth]{exp_beta_scatter.png}
   \vfill
   {\footnotesize Al subir $\beta$, los codigos se concentran mas cerca del origen.
@@ -942,10 +941,6 @@
     \end{column}
     \begin{column}{0.44\textwidth}
       \textit{Variable}: \textbf{recon\_loss} $\in \{$BCE, MSE$\}$.
-
-      \vspace{0.4em}
-      \textbf{Pregunta}: ¿que loss conviene en \textbf{2D} (la corrida final),
-      mirando reconstruccion \emph{y generacion}?
     \end{column}
   \end{columns}
 \end{frame}
