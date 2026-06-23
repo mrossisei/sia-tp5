@@ -78,8 +78,7 @@
       \textbf{Dataset}: 32 caracteres de una fuente bitmap.
       \begin{itemize}
         \item Cada letra: grilla \textbf{7$\times$5 = 35 pixeles} binarios $\{0,1\}$.
-        \item $X \in \{0,1\}^{32 \times 35}$ (sin normalizar: ya es binario).
-        \item Chico y discreto $\Rightarrow$ ideal para forzar memorizacion por un cuello.
+
       \end{itemize}
       \vspace{0.4em}
       \textbf{Pregunta gancho}: ¿se pueden comprimir 35 pixeles a \textbf{2 numeros}
@@ -161,27 +160,42 @@
 \end{frame}
 
 \begin{frame}{La respuesta: no linealidad --- arquitectura base del AE}
+  Misma idea simetrica con \textbf{cuello 2D}, pero \textbf{ocultas no lineales}:
+  \[ 35 \to 60 \to 40 \to 20 \to \mathbf{2} \to 20 \to 40 \to 60 \to 35 \]
+  \begin{itemize}
+    \item Latente \textbf{lineal} (no satura); salida \textbf{logistica} (pixeles en $(0,1)$).
+  \end{itemize}
+
+  \vspace{0.5em}
   \begin{columns}[T]
-    \begin{column}{0.52\textwidth}
-      Misma idea simetrica con \textbf{cuello 2D}, pero \textbf{ocultas no lineales}:
-      \[ 35 \to 60 \to 40 \to 20 \to \mathbf{2} \to 20 \to 40 \to 60 \to 35 \]
+    \begin{column}{0.32\textwidth}
+      \textbf{Optimizadores}
       \begin{itemize}
-        \item Ocultas \textbf{tanh}; latente \textbf{lineal} (no satura);
-              salida \textbf{logistica} (pixeles en $(0,1)$).
-        \item Perdida \textbf{BCE}, \textbf{Adam}, full-batch, EarlyStopping.
-        \item \textbf{Sin regularizacion}: queremos \emph{sobreajustar}
-              (memorizar) las 32 letras.
+        \item GD
+        \item Momentum
+        \item Adam
       \end{itemize}
-      \vspace{0.3em}
-      {\footnotesize Esta es la \emph{configuracion base} de referencia: los
-       experimentos varian \textbf{una} pieza a la vez.}
     \end{column}
-    \begin{column}{0.48\textwidth}
-      \centering
-      \includegraphics[width=\linewidth]{learning_curve.png}\\
-      {\scriptsize Curva de loss (BCE) de la corrida principal.}
+    \begin{column}{0.32\textwidth}
+      \textbf{Funciones de perdida}
+      \begin{itemize}
+        \item BCE
+        \item MSE
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \textbf{Activaciones ocultas}
+      \begin{itemize}
+        \item tanh
+        \item ReLU
+        \item logistica
+      \end{itemize}
     \end{column}
   \end{columns}
+
+  \vspace{0.5em}
+  {\footnotesize Esta es la \emph{configuracion base} de referencia: los
+   experimentos varian \textbf{una} pieza a la vez.}
 \end{frame}
 
 % ============================================================
@@ -190,13 +204,11 @@
 
 \begin{frame}[standout]
   Estudio de optimizacion
-
-  {\normalsize Una variable a la vez, controlando el resto.}
 \end{frame}
 
 % ---- Metodologia comun (loss / activacion / arquitectura) ----
 
-\begin{frame}{Estudio one-at-a-time: metodologia (comun a los 3 ejes)}
+\begin{frame}{Metodologia}
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
       \begin{table}\small
@@ -235,6 +247,36 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{Eje 1 --- Funcion de perdida: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos          & \texttt{font.h} ($32\times35$) \\
+          Arquitectura   & $[35,60,40,20,\mathbf{2},20,40,60,35]$ \\
+          Activacion     & tanh / latente lineal / logistica \\
+          Optimizador    & Adam, lr $= 10^{-3}$ \\
+          Adam $\beta_1,\beta_2,\epsilon$ & $0.9$, $0.999$, $10^{-8}$ \\
+          Batch / Init   & full-batch (32) / Xavier \\
+          Epocas         & 6000 \\
+          \textbf{Seeds} & \textbf{[0, 1, 2, 3, 42]} \\
+          \midrule
+          \textit{Variable} & perdida (BCE / MSE) \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \vspace{4em}
+      \textbf{Pregunta}: ¿que funcion de perdida permite alcanzar $\le 1$ pixel
+      de error de forma robusta entre seeds?
+    \end{column}
+  \end{columns}
+\end{frame}
+
 \begin{frame}{Eje 1 --- Funcion de perdida: BCE vs MSE}
   \centering
   \includegraphics[width=0.9\linewidth]{exp_loss_ms.png}
@@ -243,12 +285,69 @@
    \textbf{Fijamos BCE}.}
 \end{frame}
 
+\begin{frame}{Eje 2 --- Activacion oculta: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos          & \texttt{font.h} ($32\times35$) \\
+          Arquitectura   & $[35,60,40,20,\mathbf{2},20,40,60,35]$ \\
+          Perdida        & BCE (fijado en Eje 1) \\
+          Optimizador    & Adam, lr $= 10^{-3}$ \\
+          Adam $\beta_1,\beta_2,\epsilon$ & $0.9$, $0.999$, $10^{-8}$ \\
+          Batch / Init   & full-batch (32) / Xavier \\
+          Epocas         & 6000 \\
+          \textbf{Seeds} & \textbf{[0, 1, 2, 3, 42]} \\
+          \midrule
+          \textit{Variable} & activacion oculta (tanh / relu / logistica) \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \vspace{4em}
+      \textbf{Pregunta}: ¿que activacion oculta permite alcanzar $\le 1$ pixel
+      de error de forma robusta entre seeds?
+    \end{column}
+  \end{columns}
+\end{frame}
+
 \begin{frame}{Eje 2 --- Activacion oculta: tanh / relu / logistica}
   \centering
   \includegraphics[width=0.9\linewidth]{exp_activation_ms.png}
-  \vfill
-  {\footnotesize \textbf{tanh}/\textbf{relu} 5/5; \textbf{logistica} 0/5 (satura el
-   gradiente). \textbf{Fijamos tanh}.}
+\end{frame}
+
+\begin{frame}{Eje 3 --- Arquitectura: parametros}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+      \begin{table}\small
+        \begin{tabular}{ll}
+          \toprule
+          Parametro & Valor \\
+          \midrule
+          Datos          & \texttt{font.h} ($32\times35$) \\
+          Activacion     & tanh (fijado en Eje 2) \\
+          Perdida        & BCE (fijado en Eje 1) \\
+          Optimizador    & Adam, lr $= 10^{-3}$ \\
+          Adam $\beta_1,\beta_2,\epsilon$ & $0.9$, $0.999$, $10^{-8}$ \\
+          Batch / Init   & full-batch (32) / Xavier \\
+          Epocas         & 6000 \\
+          \textbf{Seeds} & \textbf{[0, 1, 2, 3, 42]} \\
+          \midrule
+          \textit{Variable} & arquitectura (profundidad / ancho) \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \vspace{4em}
+      \textbf{Pregunta}: ¿que arquitectura permite alcanzar $\le 1$ pixel
+      de error de forma robusta entre seeds?
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \begin{frame}{Eje 3 --- Arquitectura: profundidad / ancho}
@@ -380,14 +479,9 @@
       \begin{itemize}
         \item Muestreamos 500 puntos $z$ \emph{al azar} en el rango del latente
               y decodificamos.
-        \item \textbf{75\%} colapsa a una letra existente; \textbf{24\%} son
-              "nuevas plausibles".
-        \item El \textbf{1\%} restante es un patron \emph{sin estructura}, que no
-              podria considerarse una nueva letra:
+        \item \textbf{75\%} colapsa a una letra existente.
+        \item \textbf{25\%} son estructuras que podrian considerarse nuevas letras.
       \end{itemize}
-      \vspace{0.2em}
-      \centering
-      \includegraphics[height=0.30\textheight]{random_latent_sampling_noise_example.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -413,8 +507,7 @@
       \begin{itemize}
         \item Entrenamos \textbf{solo con salt\&pepper}.
         \item El ruido cambia en cada epoca: \textbf{online augmentation}.
-        \item \textbf{Gaussian} y \textbf{masking} se usan para validar
-              \emph{generalizacion} a ruido no visto.
+
       \end{itemize}
     \end{column}
   \end{columns}
@@ -430,7 +523,7 @@
           \midrule
           Datos        & \texttt{font.h} ($32\times35$) \\
           Augmentation & online \\
-          Arquitectura & $[35,60,40,20,8,20,40,60,35]$ \\
+          Arquitectura & $[35,60,40,20,\mathbf{2},20,40,60,35]$ \\
           Activaciones & tanh (oculta), logistica (salida) \\
                        & cuello \emph{lineal} (identidad) \\
           Loss / Opt   & BCE / Adam $10^{-3}$ \\
@@ -500,6 +593,11 @@
 \begin{frame}{Estudio 1 --- arquitectura $\times$ cuello: resultados}
   \centering
   \includegraphics[width=0.62\linewidth]{dae_arch_bottleneck_heatmap.png}
+  \vfill
+  {\footnotesize Cada celda: pixeles mal reconstruidos por letra (promedio),
+   alimentando el DAE con letras \textbf{ruidosas} (salt\&pepper $p{=}0.10$) y
+   midiendo el error contra la letra \textbf{limpia}. Promedio sobre 20 reps de
+   ruido $\times$ 5 seeds.}
 \end{frame}
 
 \begin{frame}{Estudio 2 --- nivel de ruido en train: parametros}
@@ -589,12 +687,9 @@
    (resto fijo: ver parametros). 5 seeds.}
   \includegraphics[width=0.72\linewidth]{dae_bnactivation_curves.png}
   \vfill
-  {\footnotesize \textbf{Empate}: ambas reconstruyen el limpio (32/32) y dan el
-   mismo denoising dentro del std. Identidad es igual o levemente mejor y mas
-   estable $\Rightarrow$ \textbf{usamos identidad} (coherente con 1a).}
 \end{frame}
 
-\begin{frame}{Capacidad de denoising (cualitativo)}
+\begin{frame}{Capacidad de denoising}
   \centering
   {\scriptsize\color{gray} DAE final: cuello 8D, entrenado con salt\&pepper $p=0.10$.}
   \includegraphics[width=0.75\linewidth]{noise_examples.png}
@@ -652,14 +747,14 @@
 \begin{frame}{Conclusiones}
   \begin{itemize}\setlength\itemsep{6pt}
     \item Un AE no lineal con cuello \textbf{2D} memoriza las 32 letras con \textbf{0 píxeles de error},
-          muy por encima del baseline PCA 2D.
-    \item \textbf{Receta robusta}: BCE + tanh + Adam funciona bien y es insensible al lr.
+          .
+    \item BCE + tanh + Adam funciona bien y es insensible al lr.
     \item El \textbf{DAE} limpia salt\&pepper hasta $p\approx0.2$--$0.3$ y generaliza a ruidos
           no vistos en train (gaussian, masking).
     \item Cuello \textbf{8D lineal} es óptimo para denoising; el nivel de ruido de train tiene
           un sweet spot en $p\approx0.10$--$0.20$.
     \item \textbf{Límite del AE}: el espacio latente \textbf{no tiene estructura}; muestrear
-          puntos arbitrarios no genera letras válidas. $\Rightarrow$ necesitamos un espacio
+          puntos arbitrarios no siempre genera letras nuevas. $\Rightarrow$ necesitamos un espacio
           latente organizado.
   \end{itemize}
 \end{frame}
