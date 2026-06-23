@@ -753,7 +753,8 @@
           \midrule
           Datos         & emojis $16\!\times\!16$ (960) \\
           Arquitectura  & encoder/decoder simetricos \\
-          Activaciones  & ReLU / logistica / identidad \\
+          Activaciones  & ReLU (ocultas) / logistica (salida) \\
+                        & / identidad (latente $\mu,\log\sigma^2$) \\
           Loss / Opt    & BCE $+$ KL / Adam $10^{-3}$ \\
           $\beta$ / Batch & 1.0 / 64 \\
           Epocas        & 400 \\
@@ -806,7 +807,8 @@
           \midrule
           Datos         & emojis $16\!\times\!16$ (960) \\
           Arquitectura  & encoder/decoder, latente 2D \\
-          Activaciones  & ReLU / logistica / identidad \\
+          Activaciones  & ReLU (ocultas) / logistica (salida) \\
+                        & / identidad (latente $\mu,\log\sigma^2$) \\
           Loss / Opt    & BCE $+$ $\beta\cdot$KL / Adam $10^{-3}$ \\
           Batch         & 64 \\
           Epocas        & 400 \\
@@ -835,8 +837,9 @@
   {\scriptsize\color{gray} Varia: $\beta\in\{0{.}1,1{.}0,4{.}0\}$ (resto fijo: ver parametros). Seed representativa.}
   \includegraphics[width=0.96\linewidth]{exp_beta_scatter.png}
   \vfill
-  {\footnotesize $\beta$ bajo: clusters dispersos. $\beta$ alto: colapsados al origen.
-   \textbf{$\beta=1{.}0$}: estructura clara y separada.}
+  {\footnotesize Mismos ejes en los 3 paneles: al subir $\beta$ la nube se \textbf{contrae hacia el origen}
+   ($\mathrm{KL}$ menor $\Rightarrow$ mas cerca del prior $\mathcal{N}(0,I)$).
+   $\beta=0{.}1$ ocupa todo el rango; $\beta=4{.}0$ colapsa al centro.}
 \end{frame}
 
 \begin{frame}{Estudio 2 --- tradeoff rec/KL por $\beta$}

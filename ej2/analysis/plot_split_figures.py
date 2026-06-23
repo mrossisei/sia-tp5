@@ -156,20 +156,34 @@ def make_beta_figures(X, y, image_shape):
         print(f"  beta={b} seed={s}  {time.time()-t:.1f}s", flush=True)
 
     # ── Figura 3: scatter latente (seed representativa) ───────────────────────
+    # Codificamos TODOS los beta primero y fijamos limites de ejes COMUNES: el
+    # efecto de beta es contraer la nube hacia el origen (KL menor), y eso solo
+    # se ve si los tres paneles comparten la misma escala (si cada uno autoescala
+    # a su rango, las tres nubes "llenan" el cuadro igual y parecen identicas).
+    mus = {b: vaes[b][0].encode(X) for b in BETAS}
+    all_mu = np.vstack([mus[b] for b in BETAS])
+    mins, maxs = all_mu.min(axis=0), all_mu.max(axis=0)
+    pad = 0.05 * (maxs - mins)
+    xlim = (mins[0] - pad[0], maxs[0] + pad[0])
+    ylim = (mins[1] - pad[1], maxs[1] + pad[1])
+
     cmap = plt.get_cmap("tab20", n_classes)
-    fig, axes = plt.subplots(1, len(BETAS), figsize=(len(BETAS) * 4.5, 4.2))
+    fig, axes = plt.subplots(1, len(BETAS), figsize=(len(BETAS) * 4.5, 4.2),
+                             sharex=True, sharey=True)
     axes = np.atleast_1d(axes)
     for ax, b in zip(axes, BETAS):
-        vae_rep, s = vaes[b]
-        mu = vae_rep.encode(X)
+        s = vaes[b][1]
+        mu = mus[b]
         for c in range(n_classes):
             m = (y == c)
             ax.scatter(mu[m, 0], mu[m, 1], s=12, color=cmap(c),
                        alpha=0.65, edgecolors="none")
         ax.set_title(f"$\\beta={b}$", fontsize=12)
         ax.set_xlabel("$z[0]$"); ax.set_ylabel("$z[1]$")
+        ax.set_xlim(*xlim); ax.set_ylim(*ylim)
+        ax.set_aspect("equal", adjustable="box")
         ax.grid(alpha=0.3)
-    fig.suptitle("Estudio 2 — espacio latente por $\\beta$ (seed representativa)",
+    fig.suptitle("Estudio 2 — espacio latente por $\\beta$ (seed representativa, ejes comunes)",
                  y=1.02, fontsize=11)
     fig.tight_layout()
     p3 = os.path.join(RESULTS_DIR, "exp_beta_scatter.png")
