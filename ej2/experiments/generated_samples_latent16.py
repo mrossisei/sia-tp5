@@ -28,6 +28,7 @@ from ej2.experiments._common import train_vae
 DATA_PATH = os.path.join(REPO_ROOT, "ej2", "data", "emojis.npz")
 RESULTS_DIR = os.path.join(REPO_ROOT, "ej2", "results")
 MODEL_PATH = os.path.join(RESULTS_DIR, "generated_latent16_seed2_model.npz")
+LATENT8_MODEL_PATH = os.path.join(RESULTS_DIR, "interp_latent8_seed1_model.npz")
 
 LATENT_DIM = 16
 EPOCHS = 1000
@@ -35,15 +36,19 @@ SEED = 2
 
 PAIR_SWEEPS = [
     {"name": "cara_feliz + corazon", "a": 0, "b": 8, "ts": [0.35, 0.45, 0.55, 0.65]},
-    {"name": "sol + cara_feliz", "a": 10, "b": 0, "ts": [0.25, 0.35, 0.45, 0.55]},
-    {"name": "cara_feliz + estrella", "a": 0, "b": 9, "ts": [0.35, 0.45, 0.55, 0.65]},
+    {"name": "cara_feliz + nube", "a": 0, "b": 11, "ts": [0.25, 0.35, 0.45, 0.55]},
+    {"name": "flor + cara_feliz", "a": 14, "b": 0, "ts": [0.25, 0.35, 0.45, 0.55]},
 ]
 
 FINAL_SPECS = [
     {"name": "cara_feliz + corazon", "a": 0, "b": 8, "t": 0.55},
-    {"name": "sol + cara_feliz", "a": 10, "b": 0, "t": 0.45},
-    {"name": "cara_feliz + estrella", "a": 0, "b": 9, "t": 0.55},
+    {"name": "cara_feliz + nube", "a": 0, "b": 11, "t": 0.35},
+    {"name": "flor + cara_feliz", "a": 14, "b": 0, "t": 0.35},
 ]
+
+RANDOM_SEED = 7
+RANDOM_COUNT = 8
+RANDOM_KEEP = [1, 3, 4]
 
 
 def load_emojis():
@@ -70,6 +75,23 @@ def load_or_train_model(X):
 def decode_mix(vae, centroids, class_a, class_b, t):
     z = (1.0 - t) * centroids[class_a] + t * centroids[class_b]
     return vae.decode(z[None, :])[0]
+
+
+def decode_feliz_corazon_from_latent8(X, y):
+    """Reusa la mezcla visual que mejor funcionaba en la interpolacion latent8."""
+    if not os.path.exists(LATENT8_MODEL_PATH):
+        raise FileNotFoundError(
+            f"No existe {LATENT8_MODEL_PATH}. Corre primero interp_feliz_sorprendida.py"
+        )
+
+    vae8 = VAE.load(LATENT8_MODEL_PATH)
+    mu8 = vae8.encode(X)
+    za = mu8[y == 0].mean(axis=0)   # cara_feliz
+    zb = mu8[y == 8].mean(axis=0)   # corazon
+    # Replica el panel t=0.56 de la figura original (np.linspace(0,1,10)).
+    t = 5.0 / 9.0
+    z = (1.0 - t) * za + t * zb
+    return vae8.decode(z[None, :])[0]
 
 
 def make_candidates(vae, centroids, image_shape):
@@ -100,20 +122,35 @@ def make_candidates(vae, centroids, image_shape):
 
 
 def make_final(vae, centroids, image_shape):
-    cols = len(FINAL_SPECS)
-    fig, axes = plt.subplots(1, cols, figsize=(cols * 2.6, 3.2))
+    X, y, _, _ = load_emojis()
+    random_samples, _ = vae.generate(RANDOM_COUNT, seed=RANDOM_SEED)
+    chosen_random = [random_samples[i] for i in RANDOM_KEEP]
+
+    total = len(FINAL_SPECS) + len(chosen_random)
+    cols = 3
+    rows = int(np.ceil(total / cols))
+    fig, axes = plt.subplots(rows, cols, figsize=(cols * 2.4, rows * 2.4))
     axes = np.atleast_1d(axes).ravel()
 
-    for ax, spec in zip(axes, FINAL_SPECS):
-        img = decode_mix(vae, centroids, spec["a"], spec["b"], spec["t"])
+    images = []
+    for i, spec in enumerate(FINAL_SPECS):
+        if i == 0:
+            img = decode_feliz_corazon_from_latent8(X, y)
+        else:
+            img = decode_mix(vae, centroids, spec["a"], spec["b"], spec["t"])
+        images.append(img)
+    images.extend(chosen_random)
+
+    for ax, img in zip(axes, images):
         ax.imshow(img.reshape(image_shape), cmap="gray",
                   interpolation="nearest", vmin=0, vmax=1)
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.set_title(spec["name"], fontsize=9)
+    for ax in axes[len(images):]:
+        ax.axis("off")
 
-    fig.suptitle("Imagenes nuevas generadas en el espacio latente 16D",
-                 y=0.92, fontsize=12)
+    fig.suptitle("Imagenes nuevas generadas en el espacio latente",
+                 y=0.97, fontsize=12)
     fig.tight_layout(rect=[0, 0, 1, 0.9])
     out = os.path.join(RESULTS_DIR, "generated_samples_latent16.png")
     save_fig(fig, out)
